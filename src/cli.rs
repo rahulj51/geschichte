@@ -33,13 +33,6 @@ pub struct Args {
     #[arg(long = "debug")]
     pub debug: bool,
 
-    /// Configuration file path
-    #[arg(long = "config", value_name = "FILE")]
-    pub config_path: Option<PathBuf>,
-
-    /// Color scheme (auto, always, never)
-    #[arg(long = "color", default_value = "auto")]
-    pub color: String,
 }
 
 impl Args {
@@ -48,9 +41,6 @@ impl Args {
             return Err("Context lines must be between 0 and 100".to_string());
         }
 
-        if !matches!(self.color.as_str(), "auto" | "always" | "never") {
-            return Err("Color must be one of: auto, always, never".to_string());
-        }
 
         Ok(())
     }
