@@ -1,5 +1,8 @@
 pub mod commands;
 pub mod parser;
+pub mod history;
+pub mod diff;
+pub mod working;
 
 use crate::error::{GeschichteError, Result};
 use std::path::{Path, PathBuf};

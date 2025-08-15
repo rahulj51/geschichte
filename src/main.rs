@@ -1,5 +1,8 @@
 mod app;
+mod cache;
 mod cli;
+mod commit;
+mod diff;
 mod error;
 mod git;
 mod terminal;
@@ -7,10 +10,7 @@ mod ui;
 
 use anyhow::Result;
 use clap::Parser;
-use crossterm::event::{self, Event, KeyCode};
-use error::GeschichteError;
-use std::io;
-use std::path::PathBuf;
+use crossterm::event::{self, Event};
 use std::time::Duration;
 
 fn main() -> Result<()> {
@@ -76,6 +76,12 @@ fn run(args: cli::Args) -> Result<()> {
         args.first_parent,
     );
 
+    // Load git data
+    if let Err(e) = app.load_git_data() {
+        eprintln!("Failed to load git data: {}", e);
+        std::process::exit(1);
+    }
+
     // Setup terminal
     let mut terminal = terminal::setup_terminal()?;
 
@@ -98,7 +104,7 @@ fn run_ui(terminal: &mut terminal::AppTerminal, app: &mut app::App) -> Result<()
         // Handle events
         if event::poll(Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
-                app.handle_key(key.code)?;
+                app.handle_key(key)?;
             }
         }
 
