@@ -52,6 +52,48 @@ pub fn fetch_diff(
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
+/// Fetches the diff between two commits for a specific file
+pub fn get_diff_between_commits(
+    repo_root: &Path,
+    start_commit_hash: &str,
+    end_commit_hash: &str,
+    file_path: &Path,
+    context_lines: u32,
+) -> Result<String> {
+    let mut cmd = Command::new("git");
+    cmd.current_dir(repo_root)
+        .arg("diff")
+        .arg(format!("--unified={}", context_lines))
+        .arg("--find-renames")
+        .arg(format!("{}..{}", start_commit_hash, end_commit_hash))
+        .arg("--")
+        .arg(file_path);
+    
+    let output = cmd.output().map_err(|e| GeschichteError::GitCommandFailed {
+        command: format!("git diff {}..{}", start_commit_hash, end_commit_hash),
+        output: e.to_string(),
+    })?;
+    
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        // It's okay if the file doesn't exist in one of the commits
+        if stderr.contains("does not exist") || stderr.contains("pathspec") {
+            return Ok(String::from("File not present in one or both commits\n"));
+        }
+        return Err(GeschichteError::GitCommandFailed {
+            command: format!("git diff {}..{}", start_commit_hash, end_commit_hash),
+            output: stderr.to_string(),
+        });
+    }
+    
+    let diff_output = String::from_utf8_lossy(&output.stdout).to_string();
+    if diff_output.trim().is_empty() {
+        return Ok(String::from("No differences between the selected commits\n"));
+    }
+    
+    Ok(diff_output)
+}
+
 /// Resolves the path of a file at a specific commit
 #[allow(dead_code)]
 pub fn resolve_path_at_commit(

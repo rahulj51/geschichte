@@ -22,6 +22,7 @@ I wrote this because I was badly missing this feature in 'Zed', my primary IDE. 
 - 🔄 **Working directory support** - See uncommitted changes as the top entry
 - 🎯 **Interactive navigation** with vim-style keybindings and focus-aware panels
 - 🎨 **Colorized diffs** with visual highlighting for additions, deletions, and context
+- 📊 **Commit-to-commit diff** - Select any two commits to see changes between them
 - 🔀 **Rename tracking** - Follow files across renames and moves (with `--follow`)
 - ⚡ **Performance optimized** with LRU caching for instant diff switching
 - 🖥️ **Split-pane interface** with resizable panels and help overlay
@@ -115,10 +116,11 @@ geschichte --first-parent main.rs
 | `Ctrl+U/Ctrl+D` | Scroll diff | Vim-style |
 | `Ctrl+B/Ctrl+F` | Scroll diff | Emacs-style |
 
-### File Switching
+### File Switching & Range Selection
 | Key | Action |
 |-----|--------|
 | `f` | Open file picker to switch to another file |
+| `d` | Mark/diff between commits - select two commits to compare |
 
 ### File Picker (when open)
 | Key | Action |
@@ -134,6 +136,37 @@ geschichte --first-parent main.rs
 |-----|--------|
 | `?` | Show/hide help overlay |
 | `q` / `Esc` | Quit (context-aware) |
+
+## 📊 Commit-to-Commit Diff
+
+Geschichte allows you to compare any two commits to see exactly what changed between them. This is perfect for understanding the evolution of your code across multiple commits.
+
+### How to Use Range Diff
+
+1. **Mark First Commit**: Navigate to any commit and press `d` - you'll see a green `► ` marker
+2. **Select Second Commit**: Navigate to another commit and press `d` again
+3. **View Diff**: The diff panel automatically updates to show changes between the two commits
+4. **Clear Selection**: Press `Esc` to clear the selection and return to normal mode
+
+### Visual Indicators
+
+- **Green `► ` arrow**: Shows which commit is marked for comparison  
+- **Header format**: `Diff (older..newer)` shows the range being compared
+- **Selection mode**: `Diff (abc123) [Selecting...]` when first commit is marked
+- **Chronological order**: Always shows older→newer regardless of selection order
+
+### Example Workflow
+
+```bash
+# 1. Navigate to an older commit (bottom of history)
+# 2. Press 'd' → see green arrow marker
+# 3. Navigate to newer commit (top of history)  
+# 4. Press 'd' → see diff between the commits
+# 5. Green lines show code added in newer commit
+# 6. Red lines show code removed from older commit
+```
+
+The range diff works across any two commits - compare your working directory with any historical commit, or see what changed between two releases!
 
 ### Coming Soon
 | Key | Action |
@@ -169,7 +202,19 @@ geschichte --first-parent main.rs
 │   2025-08-13 603c9b0 Phase-2  ││ -    println!("Hello");       │
 │   ...                         ││ +    println!("Hello, world!");│
 └───────────────────────────────┘└─────────────────────────────────┘
-[main.rs@77942bc] Tab: switch panels | f: switch file | ?: help | q: quit
+[main.rs@77942bc] Tab: switch panels | f: switch file | d: range diff | ?: help
+```
+
+### Range Diff Mode
+```
+┌─ Commits ─────────────────────┐┌─ Diff (603c9b0..77942bc) ─────┐
+│   Working Dir Modified        ││ diff --git a/src/main.rs       │
+│ ► 2025-08-15 77942bc Latest   ││ @@ -15,4 +15,12 @@ fn handle() { │
+│   2025-08-14 3f30143 Feature  ││  fn handle() {                 │
+│ ► 2025-08-13 603c9b0 Phase-2  ││ +    // New error handling     │
+│   ...                         ││ +    if error.is_fatal() {     │
+└───────────────────────────────┘└─────────────────────────────────┘
+[Range: 603c9b0..77942bc] Shows changes between two selected commits
 ```
 
 ## 🎯 Why Geschichte?
@@ -228,7 +273,6 @@ cargo fmt
 Built with these excellent Rust crates:
 - [ratatui](https://github.com/ratatui-org/ratatui) - Terminal UI framework
 - [crossterm](https://github.com/crossterm-rs/crossterm) - Cross-platform terminal manipulation
-- [tokio](https://github.com/tokio-rs/tokio) - Async runtime
 - [clap](https://github.com/clap-rs/clap) - Command line parsing
 - [anyhow](https://github.com/dtolnay/anyhow) - Error handling
 

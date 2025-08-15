@@ -53,6 +53,10 @@ pub struct App {
     pub loading: bool,
     pub error_message: Option<String>,
     pub terminal_height: u16,
+    
+    // Diff range selection
+    pub diff_range_start: Option<usize>,
+    pub current_diff_range: Option<(usize, usize)>, // (older_index, newer_index)
 }
 
 impl App {
@@ -88,6 +92,8 @@ impl App {
             loading: false,
             error_message: None,
             terminal_height: 24,
+            diff_range_start: None,
+            current_diff_range: None,
         })
     }
 
@@ -119,6 +125,8 @@ impl App {
             loading: false,
             error_message: None,
             terminal_height: 24,
+            diff_range_start: None,
+            current_diff_range: None,
         }
     }
 
@@ -289,6 +297,10 @@ impl App {
     pub fn move_selection_up(&mut self) -> Result<()> {
         if self.selected_index > 0 {
             self.selected_index -= 1;
+            // Clear range diff when navigating
+            if self.diff_range_start.is_none() {
+                self.current_diff_range = None;
+            }
             self.load_diff_for_selected_commit()?;
         }
         Ok(())
@@ -297,6 +309,10 @@ impl App {
     pub fn move_selection_down(&mut self) -> Result<()> {
         if self.selected_index + 1 < self.commits.len() {
             self.selected_index += 1;
+            // Clear range diff when navigating
+            if self.diff_range_start.is_none() {
+                self.current_diff_range = None;
+            }
             self.load_diff_for_selected_commit()?;
         }
         Ok(())
@@ -371,6 +387,91 @@ impl App {
         self.show_help = !self.show_help;
     }
 
+    pub fn toggle_diff_range_selection(&mut self) -> Result<()> {
+        match &self.mode {
+            AppMode::History { .. } => {
+                if let Some(start_index) = self.diff_range_start {
+                    // We have a start commit, create range diff
+                    let end_index = self.selected_index;
+                    if start_index != end_index {
+                        self.show_diff_range(start_index, end_index)?;
+                    } else {
+                        // Same commit selected, just clear the selection
+                        self.current_diff_range = None;
+                    }
+                    self.diff_range_start = None;
+                } else {
+                    // Mark the current commit as start
+                    self.diff_range_start = Some(self.selected_index);
+                }
+                Ok(())
+            }
+            AppMode::FilePicker { .. } => Ok(()),
+        }
+    }
+
+    pub fn clear_diff_range_selection(&mut self) {
+        self.diff_range_start = None;
+        self.current_diff_range = None;
+    }
+
+    pub fn is_commit_marked_for_diff(&self, index: usize) -> bool {
+        self.diff_range_start == Some(index)
+    }
+
+    fn show_diff_range(&mut self, start_index: usize, end_index: usize) -> Result<()> {
+        if self.commits.is_empty() || start_index >= self.commits.len() || end_index >= self.commits.len() {
+            return Ok(());
+        }
+
+        // Determine the correct chronological order (older commit first)
+        // In the commits list, newer commits are at the top (lower index)
+        // So lower index = newer, higher index = older
+        let (older_index, newer_index) = if start_index > end_index {
+            (start_index, end_index) // start is older (higher index)
+        } else {
+            (end_index, start_index) // end is older (higher index) 
+        };
+
+        let older_commit = &self.commits[older_index];
+        let newer_commit = &self.commits[newer_index];
+        
+        // Create cache key for the range diff (always older..newer)
+        let cache_key = format!("{}..{}", older_commit.hash, newer_commit.hash);
+        
+        // Check cache first
+        if let Some(cached_diff) = self.diff_cache.get(&cache_key) {
+            self.current_diff = cached_diff.clone();
+            self.diff_scroll = 0;
+            return Ok(());
+        }
+
+        // Get the file path
+        let file_path = match &self.mode {
+            AppMode::History { file_path, .. } => file_path.clone(),
+            AppMode::FilePicker { .. } => return Ok(()), // Should not happen
+        };
+
+        // Generate diff between the two commits (older..newer)
+        let diff = crate::git::diff::get_diff_between_commits(
+            &self.repo_root,
+            &older_commit.hash,
+            &newer_commit.hash,
+            &file_path,
+            self.context_lines,
+        )?;
+
+        // Cache and set the diff
+        self.diff_cache.put(cache_key, diff.clone());
+        self.current_diff = diff;
+        self.diff_scroll = 0;
+        
+        // Store the current range for UI display
+        self.current_diff_range = Some((older_index, newer_index));
+
+        Ok(())
+    }
+
     pub fn handle_key(&mut self, key: crossterm::event::KeyEvent) -> Result<()> {
         use crossterm::event::{KeyCode, KeyModifiers};
 
@@ -384,6 +485,8 @@ impl App {
             (KeyCode::Esc, _) => {
                 if self.show_help {
                     self.show_help = false;
+                } else if self.diff_range_start.is_some() {
+                    self.clear_diff_range_selection();
                 } else {
                     self.quit();
                 }
@@ -447,6 +550,9 @@ impl App {
             }
             (KeyCode::Char('/'), KeyModifiers::NONE) => {
                 // TODO: Start search
+            }
+            (KeyCode::Char('d'), KeyModifiers::NONE) => {
+                self.toggle_diff_range_selection()?;
             }
             (KeyCode::Char('?'), KeyModifiers::NONE) => {
                 self.toggle_help();

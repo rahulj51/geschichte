@@ -83,10 +83,18 @@ fn draw_commits_panel(frame: &mut Frame, app: &App, area: Rect) {
 
     let items: Vec<ListItem> = app.commits
         .iter()
-        .map(|commit| {
+        .enumerate()
+        .map(|(index, commit)| {
+            let marker = if app.is_commit_marked_for_diff(index) {
+                "► "
+            } else {
+                ""
+            };
+
             if commit.is_working_directory {
                 // Special styling for working directory
                 ListItem::new(Line::from(vec![
+                    Span::styled(marker, Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
                     Span::styled("Working", Style::default().fg(Color::Magenta)),
                     Span::raw(" "),
                     Span::styled("Dir", Style::default().fg(Color::Magenta)),
@@ -99,6 +107,7 @@ fn draw_commits_panel(frame: &mut Frame, app: &App, area: Rect) {
             } else {
                 // Regular commit styling
                 ListItem::new(Line::from(vec![
+                    Span::styled(marker, Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
                     Span::styled(&commit.date, Style::default().fg(Color::Yellow)),
                     Span::raw(" "),
                     Span::styled(&commit.short_hash, Style::default().fg(Color::Cyan)),
@@ -125,11 +134,25 @@ fn draw_commits_panel(frame: &mut Frame, app: &App, area: Rect) {
 
 fn draw_diff_panel(frame: &mut Frame, app: &App, area: Rect) {
     let title = if app.commits.is_empty() {
-        " Diff "
+        " Diff ".to_string()
     } else if app.selected_index < app.commits.len() {
-        &format!(" Diff ({}) ", app.commits[app.selected_index].short_hash)
+        // Check if we're showing a range diff
+        if let Some((older_idx, newer_idx)) = app.current_diff_range {
+            if older_idx < app.commits.len() && newer_idx < app.commits.len() {
+                format!(" Diff ({}..{}) ", 
+                    app.commits[older_idx].short_hash,
+                    app.commits[newer_idx].short_hash)
+            } else {
+                format!(" Diff ({}) ", app.commits[app.selected_index].short_hash)
+            }
+        } else if let Some(_start_index) = app.diff_range_start {
+            // Show that we're in selection mode
+            format!(" Diff ({}) [Selecting...] ", app.commits[app.selected_index].short_hash)
+        } else {
+            format!(" Diff ({}) ", app.commits[app.selected_index].short_hash)
+        }
     } else {
-        " Diff "
+        " Diff ".to_string()
     };
 
     let focused = app.get_focused_panel() == Some(FocusedPanel::Diff);
@@ -203,7 +226,7 @@ fn draw_status_bar(frame: &mut Frame, app: &App, area: Rect) {
 fn draw_help_overlay(frame: &mut Frame, _app: &App, area: Rect) {
     // Calculate popup size - center it
     let popup_width = 50;
-    let popup_height = 16;
+    let popup_height = 17;
     let x = (area.width.saturating_sub(popup_width)) / 2;
     let y = (area.height.saturating_sub(popup_height)) / 2;
     
@@ -259,6 +282,10 @@ fn draw_help_overlay(frame: &mut Frame, _app: &App, area: Rect) {
         Line::from(vec![
             Span::styled("c", Style::default().fg(Color::Green)),
             Span::raw("        Copy commit hash (TODO)"),
+        ]),
+        Line::from(vec![
+            Span::styled("d", Style::default().fg(Color::Green)),
+            Span::raw("        Mark/diff between commits"),
         ]),
         Line::from(""),
         Line::from(vec![
