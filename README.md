@@ -10,6 +10,8 @@ Geschichte (German for "history") is a fast, keyboard-driven terminal UI for exp
 
 Unlike full-featured git clients, Geschichte focuses specifically on **single-file history exploration**. It's designed for developers who want to quickly understand how a particular file changed over time, not for managing branches, commits, or other git operations. Think of it as a specialized tool that does one thing exceptionally well: showing you the story of your file.
 
+I wrote this because I was badly missing this feature in 'Zed', my primary IDE. Geschichte can be opened in a terminal window in your favorite IDE. 
+
 ![Main screen](screenshots/geschichte-main.png)
 
 ## ✨ Features
