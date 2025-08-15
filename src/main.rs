@@ -116,6 +116,8 @@ fn run_ui(terminal: &mut terminal::AppTerminal, app: &mut app::App) -> Result<()
     loop {
         // Draw the UI
         terminal.draw(|frame| {
+            // Update terminal height before drawing
+            app.update_terminal_height(frame.area().height);
             ui::draw(frame, app);
         })?;
 

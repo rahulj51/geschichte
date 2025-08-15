@@ -52,6 +52,7 @@ pub struct App {
     pub show_help: bool,
     pub loading: bool,
     pub error_message: Option<String>,
+    pub terminal_height: u16,
 }
 
 impl App {
@@ -86,6 +87,7 @@ impl App {
             show_help: false,
             loading: false,
             error_message: None,
+            terminal_height: 24,
         })
     }
 
@@ -116,6 +118,7 @@ impl App {
             show_help: false,
             loading: false,
             error_message: None,
+            terminal_height: 24,
         }
     }
 
@@ -309,6 +312,30 @@ impl App {
         self.diff_scroll += 1;
     }
 
+    pub fn scroll_diff_page_up(&mut self) {
+        let page_size = self.get_page_scroll_size();
+        self.diff_scroll = self.diff_scroll.saturating_sub(page_size);
+    }
+
+    pub fn scroll_diff_page_down(&mut self) {
+        let page_size = self.get_page_scroll_size();
+        self.diff_scroll += page_size;
+    }
+
+    fn get_page_scroll_size(&self) -> usize {
+        // Calculate scroll size based on visible diff area
+        // Accounting for borders (2 lines) and status bar (1 line)
+        let visible_height = self.terminal_height.saturating_sub(3) as usize;
+        // Use 60% of the visible area for diff (based on split_ratio)
+        let diff_height = ((visible_height as f32) * (1.0 - self.split_ratio)) as usize;
+        // Scroll by half a page for better readability
+        diff_height.saturating_sub(2) / 2
+    }
+
+    pub fn update_terminal_height(&mut self, height: u16) {
+        self.terminal_height = height;
+    }
+
     pub fn switch_focus(&mut self) {
         if let AppMode::History { focused_panel, .. } = &mut self.mode {
             *focused_panel = match *focused_panel {
@@ -382,41 +409,29 @@ impl App {
             }
             (KeyCode::PageUp, _) => {
                 // Always scroll diff for PageUp/PageDown regardless of focus
-                for _ in 0..5 {
-                    self.scroll_diff_up();
-                }
+                self.scroll_diff_page_up();
             }
             (KeyCode::PageDown, _) => {
                 // Always scroll diff for PageUp/PageDown regardless of focus
-                for _ in 0..5 {
-                    self.scroll_diff_down();
-                }
+                self.scroll_diff_page_down();
             }
             // Mac-friendly vim-style navigation
             (KeyCode::Char('u'), KeyModifiers::CONTROL) => {
                 // Ctrl+U = Page Up (vim-style)
-                for _ in 0..5 {
-                    self.scroll_diff_up();
-                }
+                self.scroll_diff_page_up();
             }
             (KeyCode::Char('d'), KeyModifiers::CONTROL) => {
                 // Ctrl+D = Page Down (vim-style)
-                for _ in 0..5 {
-                    self.scroll_diff_down();
-                }
+                self.scroll_diff_page_down();
             }
             // Mac-friendly emacs-style navigation
             (KeyCode::Char('b'), KeyModifiers::CONTROL) => {
                 // Ctrl+B = Page Up (emacs-style)
-                for _ in 0..5 {
-                    self.scroll_diff_up();
-                }
+                self.scroll_diff_page_up();
             }
             (KeyCode::Char('f'), KeyModifiers::CONTROL) => {
                 // Ctrl+F = Page Down (emacs-style)
-                for _ in 0..5 {
-                    self.scroll_diff_down();
-                }
+                self.scroll_diff_page_down();
             }
             (KeyCode::Char('h'), KeyModifiers::NONE) => {
                 self.decrease_split_ratio();
