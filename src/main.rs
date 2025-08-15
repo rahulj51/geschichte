@@ -56,31 +56,49 @@ fn run(args: cli::Args) -> Result<()> {
 
     log::debug!("Found git repository at: {}", repo_root.display());
 
-    // Resolve file path
-    let file_path = if args.file_path.is_absolute() {
-        args.file_path.clone()
+    // Create application state based on whether file argument was provided
+    let mut app = if let Some(file_path_arg) = args.file_path {
+        // File argument provided - use history mode
+        let file_path = if file_path_arg.is_absolute() {
+            file_path_arg
+        } else {
+            std::env::current_dir()?.join(&file_path_arg)
+        };
+
+        // Verify file exists in git
+        let relative_path = git::verify_file_in_repo(&repo_root, &file_path)?;
+        log::debug!("Viewing history for: {}", relative_path.display());
+
+        let mut app = app::App::new_history(
+            repo_root,
+            relative_path,
+            args.context_lines,
+            !args.no_follow,
+            args.first_parent,
+        );
+
+        // Load git data
+        if let Err(e) = app.load_git_data() {
+            eprintln!("Failed to load git data: {}", e);
+            std::process::exit(1);
+        }
+
+        app
     } else {
-        std::env::current_dir()?.join(&args.file_path)
+        // No file argument - use file picker mode
+        match app::App::new_file_picker(
+            repo_root,
+            args.context_lines,
+            !args.no_follow,
+            args.first_parent,
+        ) {
+            Ok(app) => app,
+            Err(e) => {
+                eprintln!("Failed to initialize file picker: {}", e);
+                std::process::exit(1);
+            }
+        }
     };
-
-    // Verify file exists in git
-    let relative_path = git::verify_file_in_repo(&repo_root, &file_path)?;
-    log::debug!("Viewing history for: {}", relative_path.display());
-
-    // Create application state
-    let mut app = app::App::new(
-        repo_root,
-        relative_path,
-        args.context_lines,
-        !args.no_follow,
-        args.first_parent,
-    );
-
-    // Load git data
-    if let Err(e) = app.load_git_data() {
-        eprintln!("Failed to load git data: {}", e);
-        std::process::exit(1);
-    }
 
     // Setup terminal
     let mut terminal = terminal::setup_terminal()?;

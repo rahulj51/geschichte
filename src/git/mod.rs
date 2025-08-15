@@ -1,4 +1,5 @@
 pub mod commands;
+pub mod files;
 pub mod parser;
 pub mod history;
 pub mod diff;

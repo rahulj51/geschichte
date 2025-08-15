@@ -13,6 +13,7 @@ Geschichte (German for "history") is a fast, keyboard-driven terminal UI for exp
 ## ✨ Features
 
 ### Core Functionality
+- 📁 **Interactive file picker** - Fuzzy search and select any tracked file with popup interface
 - 🔍 **File history visualization** with commit dates, hashes, authors, and subjects
 - 🔄 **Working directory support** - See uncommitted changes as the top entry
 - 🎯 **Interactive navigation** with vim-style keybindings and focus-aware panels
@@ -22,6 +23,7 @@ Geschichte (German for "history") is a fast, keyboard-driven terminal UI for exp
 - 🖥️ **Split-pane interface** with resizable panels and help overlay
 
 ### User Experience
+- 🔄 **Seamless file switching** - Switch between files without losing context using 'f' key
 - 🍎 **Mac-friendly navigation** - Multiple scroll options (PageUp/Down, Ctrl+D/U, Ctrl+F/B)
 - 📱 **Focus-aware controls** - Arrow keys work differently based on active panel
 - 🎹 **Comprehensive keybindings** - Vim, emacs, and traditional navigation styles
@@ -52,6 +54,9 @@ brew install geschichte
 
 ### Basic Usage
 ```bash
+# Open file picker to browse and select any tracked file
+geschichte
+
 # View history for a specific file
 geschichte src/main.rs
 geschichte README.md
@@ -60,10 +65,10 @@ geschichte path/to/any/file.txt
 
 ### Command Line Options
 ```bash
-geschichte [OPTIONS] <FILE>
+geschichte [OPTIONS] [FILE]
 
 Arguments:
-  <FILE>  Path to the file to view history for
+  [FILE]  Path to the file to view history for (optional - opens file picker if not provided)
 
 Options:
   -C, --repo <DIR>             Repository root directory (auto-discovered if not specified)
@@ -77,6 +82,9 @@ Options:
 
 ### Examples
 ```bash
+# Open file picker to browse all tracked files
+geschichte
+
 # More context in diffs
 geschichte -L 10 src/main.rs
 
@@ -103,11 +111,25 @@ geschichte --first-parent main.rs
 | `Ctrl+U/Ctrl+D` | Scroll diff | Vim-style |
 | `Ctrl+B/Ctrl+F` | Scroll diff | Emacs-style |
 
+### File Switching
+| Key | Action |
+|-----|--------|
+| `f` | Open file picker to switch to another file |
+
+### File Picker (when open)
+| Key | Action |
+|-----|--------|
+| `↑↓` / `Ctrl+P/N` | Navigate file list |
+| `Enter` | Select file and view history |
+| `Esc` | Return to previous file (or quit if no previous file) |
+| Type characters | Fuzzy search files |
+| `Ctrl+U` | Clear search |
+
 ### General
 | Key | Action |
 |-----|--------|
 | `?` | Show/hide help overlay |
-| `q` / `Esc` | Quit |
+| `q` / `Esc` | Quit (context-aware) |
 
 ### Coming Soon
 | Key | Action |
@@ -118,6 +140,23 @@ geschichte --first-parent main.rs
 
 ## 🎨 Interface
 
+### File Picker Mode
+```
+                   ┌─ Select File ─────────────────────────┐
+                   │ ┌─ Search ─────────────────────────┐ │
+                   │ │ 🔍 main                          │ │
+                   │ └─────────────────────────────────────┘ │
+                   │ ▲ src/main.rs        Modified     │
+                   │ > src/app.rs         2024-08-15   │
+                   │   src/cli.rs         2024-08-14   │
+                   │   README.md          2024-08-13   │
+                   │   Cargo.toml         2024-08-12   │
+                   │   ...                              │
+                   │ 📁 42 files • 4 matches • ↑↓: navigate • Enter: select • Esc: quit
+                   └───────────────────────────────────────┘
+```
+
+### History View Mode
 ```
 ┌─ Commits ─────────────────────┐┌─ Diff ─────────────────────────┐
 │ > Working Dir Modified        ││ diff --git a/src/main.rs       │
@@ -126,7 +165,7 @@ geschichte --first-parent main.rs
 │   2025-08-13 603c9b0 Phase-2  ││ -    println!("Hello");       │
 │   ...                         ││ +    println!("Hello, world!");│
 └───────────────────────────────┘└─────────────────────────────────┘
-[main.rs@77942bc] Tab: switch panels | h/l: resize | ?: help | q: quit
+[main.rs@77942bc] Tab: switch panels | f: switch file | ?: help | q: quit
 ```
 
 ## 🎯 Why Geschichte?
@@ -144,7 +183,6 @@ geschichte --first-parent main.rs
 ## 🛣️ Roadmap
 
 ### Upcoming Features
-- 📁 **File picker popup** - Run `geschichte` without arguments to select any tracked file
 - 🔍 **In-diff search** - Search within diff content with regex support
 - 🔄 **Merge parent cycling** - Navigate through merge commit parents
 - 📋 **Copy commit hash** - Quick clipboard integration

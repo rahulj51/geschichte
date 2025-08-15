@@ -9,9 +9,9 @@ use std::path::PathBuf;
     long_about = None
 )]
 pub struct Args {
-    /// Path to the file to view history for
+    /// Path to the file to view history for (optional - opens file picker if not provided)
     #[arg(value_name = "FILE")]
-    pub file_path: PathBuf,
+    pub file_path: Option<PathBuf>,
 
     /// Repository root directory (auto-discovered if not specified)
     #[arg(short = 'C', long = "repo", value_name = "DIR")]

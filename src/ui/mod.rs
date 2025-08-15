@@ -1,3 +1,5 @@
+pub mod file_picker;
+
 use crate::app::{App, FocusedPanel};
 use crate::diff::parse_diff;
 use ratatui::{
@@ -9,6 +11,24 @@ use ratatui::{
 };
 
 pub fn draw(frame: &mut Frame, app: &App) {
+    match &app.mode {
+        crate::app::AppMode::FilePicker { ref state, ref context } => {
+            // In file picker mode, draw the file picker popup  
+            file_picker::draw_file_picker(frame, state, context, frame.area());
+        }
+        crate::app::AppMode::History { .. } => {
+            // In history mode, draw the normal UI
+            draw_history_ui(frame, app);
+        }
+    }
+
+    // Draw help overlay on top if shown
+    if app.show_help {
+        draw_help_overlay(frame, app, frame.area());
+    }
+}
+
+fn draw_history_ui(frame: &mut Frame, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Min(0), Constraint::Length(1)])
@@ -25,11 +45,6 @@ pub fn draw(frame: &mut Frame, app: &App) {
     draw_commits_panel(frame, app, main_chunks[0]);
     draw_diff_panel(frame, app, main_chunks[1]);
     draw_status_bar(frame, app, chunks[1]);
-    
-    // Draw help overlay on top if shown
-    if app.show_help {
-        draw_help_overlay(frame, app, frame.area());
-    }
 }
 
 fn draw_commits_panel(frame: &mut Frame, app: &App, area: Rect) {
@@ -39,7 +54,7 @@ fn draw_commits_panel(frame: &mut Frame, app: &App, area: Rect) {
         &format!(" Commits ({}) ", app.commits.len())
     };
 
-    let focused = app.focused_panel == FocusedPanel::Commits;
+    let focused = app.get_focused_panel() == Some(FocusedPanel::Commits);
     let border_style = if focused {
         Style::default().fg(Color::Cyan)
     } else {
@@ -117,7 +132,7 @@ fn draw_diff_panel(frame: &mut Frame, app: &App, area: Rect) {
         " Diff "
     };
 
-    let focused = app.focused_panel == FocusedPanel::Diff;
+    let focused = app.get_focused_panel() == Some(FocusedPanel::Diff);
     let border_style = if focused {
         Style::default().fg(Color::Cyan)
     } else {
@@ -159,15 +174,21 @@ fn draw_diff_panel(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_status_bar(frame: &mut Frame, app: &App, area: Rect) {
-    let focus_hint = match app.focused_panel {
-        FocusedPanel::Commits => "↑↓/jk: select commit",
-        FocusedPanel::Diff => "↑↓/jk: scroll diff",
+    let focus_hint = match app.get_focused_panel() {
+        Some(FocusedPanel::Commits) => "↑↓/jk: select commit",
+        Some(FocusedPanel::Diff) => "↑↓/jk: scroll diff",
+        None => "Type to search files",
+    };
+
+    let file_display = match app.get_file_path() {
+        Some(path) => path.display().to_string(),
+        None => "File Picker".to_string(),
     };
 
     let status = format!(
         " {} | {} | Tab: panel | {} | h/l: resize | ?: help | q: quit ",
         app.repo_root.display(),
-        app.file_path.display(),
+        file_display,
         focus_hint
     );
 
@@ -227,6 +248,10 @@ fn draw_help_overlay(frame: &mut Frame, _app: &App, area: Rect) {
             Span::raw("    Scroll diff (emacs-style)"),
         ]),
         Line::from(""),
+        Line::from(vec![
+            Span::styled("f", Style::default().fg(Color::Green)),
+            Span::raw("        Switch to another file"),
+        ]),
         Line::from(vec![
             Span::styled("/", Style::default().fg(Color::Green)),
             Span::raw("        Search in diff (TODO)"),
