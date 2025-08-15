@@ -53,6 +53,7 @@ pub fn fetch_diff(
 }
 
 /// Resolves the path of a file at a specific commit
+#[allow(dead_code)]
 pub fn resolve_path_at_commit(
     repo_root: &Path,
     commit_hash: &str,

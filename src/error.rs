@@ -13,6 +13,7 @@ pub enum GeschichteError {
     GitCommandFailed { command: String, output: String },
 
     #[error("Failed to parse git output: {reason}")]
+    #[allow(dead_code)]
     ParseError { reason: String },
 
     #[error("IO error: {0}")]
@@ -22,9 +23,11 @@ pub enum GeschichteError {
     TerminalError(String),
 
     #[error("Configuration error: {0}")]
+    #[allow(dead_code)]
     ConfigError(String),
 
     #[error("Cache error: {0}")]
+    #[allow(dead_code)]
     CacheError(String),
 
     #[error("Anyhow error: {0}")]

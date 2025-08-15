@@ -1,6 +1,7 @@
 use crate::error::{GeschichteError, Result};
 
 /// Parses git log output into structured data
+#[allow(dead_code)]
 pub fn parse_log_line(line: &str) -> Result<(String, String, String, String, String)> {
     let parts: Vec<&str> = line.split('\0').collect();
     if parts.len() != 5 {

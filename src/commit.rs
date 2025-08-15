@@ -5,17 +5,17 @@ pub struct Commit {
     pub hash: String,
     pub short_hash: String,
     pub date: String,
-    pub author: String,
+    pub _author: String,
     pub subject: String,
-    pub rename_info: Option<RenameInfo>,
+    pub _rename_info: Option<RenameInfo>,
     pub is_working_directory: bool,
 }
 
 #[derive(Debug, Clone)]
 pub struct RenameInfo {
-    pub old_path: PathBuf,
-    pub new_path: PathBuf,
-    pub similarity: u8,
+    pub _old_path: PathBuf,
+    pub _new_path: PathBuf,
+    pub _similarity: u8,
 }
 
 impl Commit {
@@ -30,9 +30,9 @@ impl Commit {
             hash,
             short_hash,
             date,
-            author,
+            _author: author,
             subject,
-            rename_info: None,
+            _rename_info: None,
             is_working_directory: false,
         }
     }
@@ -42,9 +42,9 @@ impl Commit {
             hash: "WORKING_DIR".to_string(),
             short_hash: "WD".to_string(),
             date: "Working".to_string(),
-            author: "Directory".to_string(),
+            _author: "Directory".to_string(),
             subject: status_text,
-            rename_info: None,
+            _rename_info: None,
             is_working_directory: true,
         }
     }

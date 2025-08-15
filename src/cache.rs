@@ -21,6 +21,7 @@ impl DiffCache {
         self.cache.put(key, value);
     }
 
+    #[allow(dead_code)]
     pub fn contains(&self, key: &str) -> bool {
         self.cache.contains(key)
     }

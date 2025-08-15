@@ -56,6 +56,7 @@ impl FilePickerState {
         state
     }
 
+    #[allow(dead_code)]
     pub fn update_query(&mut self, query: String) {
         self.query = query;
         self.selected = 0;

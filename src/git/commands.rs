@@ -3,6 +3,7 @@ use std::path::Path;
 use std::process::Command;
 
 /// Executes a git command and returns the output
+#[allow(dead_code)]
 pub fn run_git_command(
     args: &[&str],
     repo_path: &Path,
