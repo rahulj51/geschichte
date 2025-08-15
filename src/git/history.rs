@@ -151,7 +151,7 @@ pub fn get_commit_parents(repo_root: &Path, commit_hash: &str) -> Result<Vec<Str
     }
     
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let parts: Vec<&str> = stdout.trim().split_whitespace().collect();
+    let parts: Vec<&str> = stdout.split_whitespace().collect();
     
     // First part is the commit itself, rest are parents
     if parts.len() > 1 {

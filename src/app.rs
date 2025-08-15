@@ -12,6 +12,7 @@ pub enum FocusedPanel {
 }
 
 #[derive(Debug)]
+#[allow(clippy::large_enum_variant)]
 pub enum AppMode {
     FilePicker {
         state: FilePickerState,
@@ -338,7 +339,7 @@ impl App {
         self.diff_scroll += page_size;
     }
 
-    fn get_page_scroll_size(&self) -> usize {
+    pub fn get_page_scroll_size(&self) -> usize {
         // Calculate scroll size based on visible diff area
         // Accounting for borders (2 lines) and status bar (1 line)
         let visible_height = self.terminal_height.saturating_sub(3) as usize;

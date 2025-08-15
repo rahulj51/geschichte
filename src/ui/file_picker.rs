@@ -214,8 +214,7 @@ fn draw_search_box(frame: &mut Frame, state: &FilePickerState, area: Rect) {
 fn draw_file_list(frame: &mut Frame, state: &FilePickerState, area: Rect) {
     let list_items: Vec<ListItem> = state.filtered_files
         .iter()
-        .enumerate()
-        .map(|(_i, (file_index, highlight_indices))| {
+        .map(|(file_index, highlight_indices)| {
             let file = &state.files[*file_index];
             
             // Create highlighted file path

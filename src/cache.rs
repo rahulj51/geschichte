@@ -29,4 +29,14 @@ impl DiffCache {
     pub fn clear(&mut self) {
         self.cache.clear();
     }
+
+    #[allow(dead_code)]
+    pub fn len(&self) -> usize {
+        self.cache.len()
+    }
+
+    #[allow(dead_code)]
+    pub fn is_empty(&self) -> bool {
+        self.cache.is_empty()
+    }
 }

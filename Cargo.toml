@@ -57,6 +57,7 @@ env_logger = "0.11"
 tempfile = "3.10"
 pretty_assertions = "1.4"
 insta = "1.39"
+serial_test = "3.0"
 
 [profile.release]
 opt-level = 3
