@@ -26,6 +26,9 @@ pub enum GeschichteError {
 
     #[error("Cache error: {0}")]
     CacheError(String),
+
+    #[error("Anyhow error: {0}")]
+    AnyhowError(#[from] anyhow::Error),
 }
 
 pub type Result<T> = std::result::Result<T, GeschichteError>;

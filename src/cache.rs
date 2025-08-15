@@ -24,4 +24,8 @@ impl DiffCache {
     pub fn contains(&self, key: &str) -> bool {
         self.cache.contains(key)
     }
+
+    pub fn clear(&mut self) {
+        self.cache.clear();
+    }
 }

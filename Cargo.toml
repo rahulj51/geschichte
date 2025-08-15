@@ -42,6 +42,7 @@ once_cell = "1.19"
 chrono = "0.4"
 regex = "1.10"
 lru = "0.12"
+fuzzy-matcher = "0.3"
 
 # Serialization (for config)
 serde = { version = "1.0", features = ["derive"] }
