@@ -8,7 +8,7 @@
 
 Geschichte (German for "history") is a fast, keyboard-driven terminal UI for exploring git file history. Navigate through commits, view diffs, and understand how your files evolved over time—all without leaving your terminal.
 
-![Main screen](screenshots/geschichte_main.png)
+![Main screen](screenshots/geschichte-main.png)
 
 ## ✨ Features
 
