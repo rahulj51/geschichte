@@ -214,7 +214,7 @@ fn draw_file_list(frame: &mut Frame, state: &FilePickerState, area: Rect) {
     let list_items: Vec<ListItem> = state.filtered_files
         .iter()
         .enumerate()
-        .map(|(i, (file_index, highlight_indices))| {
+        .map(|(_i, (file_index, highlight_indices))| {
             let file = &state.files[*file_index];
             
             // Create highlighted file path
@@ -224,7 +224,7 @@ fn draw_file_list(frame: &mut Frame, state: &FilePickerState, area: Rect) {
             let status_symbol = file.status.symbol();
             let status_color = file.status.style_color();
             let modified = format_modified_time(file.modified);
-            let size = format_file_size(file.size);
+            let _size = format_file_size(file.size);
 
             // Create the line with proper spacing
             let mut spans = vec![
