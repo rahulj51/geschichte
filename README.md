@@ -8,6 +8,8 @@
 
 Geschichte (German for "history") is a fast, keyboard-driven terminal UI for exploring git file history. Navigate through commits, view diffs, and understand how your files evolved over time—all without leaving your terminal.
 
+![Main screen](screenshots/geschichte_main.png)
+
 ## ✨ Features
 
 ### Core Functionality
@@ -21,7 +23,7 @@ Geschichte (German for "history") is a fast, keyboard-driven terminal UI for exp
 
 ### User Experience
 - 🍎 **Mac-friendly navigation** - Multiple scroll options (PageUp/Down, Ctrl+D/U, Ctrl+F/B)
-- 📱 **Focus-aware controls** - Arrow keys work differently based on active panel  
+- 📱 **Focus-aware controls** - Arrow keys work differently based on active panel
 - 🎹 **Comprehensive keybindings** - Vim, emacs, and traditional navigation styles
 - 🔧 **Merge commit handling** - Proper parent resolution for complex histories
 - ⚙️ **Configurable context** - Adjust diff context lines via CLI arguments
@@ -175,7 +177,7 @@ cargo fmt
 ## 📊 Performance
 
 - **Startup time**: < 500ms for typical repositories
-- **Memory usage**: < 20MB for 1000+ commits  
+- **Memory usage**: < 20MB for 1000+ commits
 - **Diff caching**: LRU cache holds 50 diffs for instant navigation
 - **Large repositories**: Tested with 10k+ commit histories
 
