@@ -30,6 +30,7 @@ I wrote this because I was badly missing this feature in 'Zed', my primary IDE. 
 ### User Experience
 - 🔄 **Seamless file switching** - Switch between files without losing context using 'f' key
 - 🍎 **Mac-friendly navigation** - Multiple scroll options (PageUp/Down, Ctrl+D/U, Ctrl+F/B)
+- 🍎 **Mouse support** - Scrolling support with mouse
 - 📱 **Focus-aware controls** - Arrow keys work differently based on active panel
 - 🎹 **Comprehensive keybindings** - Vim, emacs, and traditional navigation styles
 - 🔧 **Merge commit handling** - Proper parent resolution for complex histories
