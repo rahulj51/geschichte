@@ -1,7 +1,7 @@
 pub mod file_picker;
 
 use crate::app::{App, FocusedPanel};
-use crate::diff::parse_diff;
+use crate::diff::HighlightedDiff;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
@@ -184,12 +184,17 @@ fn draw_diff_panel(frame: &mut Frame, app: &App, area: Rect) {
         return;
     }
 
-    let diff_lines = parse_diff(&app.current_diff);
-    let styled_lines: Vec<Line> = diff_lines
-        .iter()
+    // Create a highlighted diff with syntax highlighting based on the file path
+    let file_path = app.get_file_path().map(|p| p.as_path());
+    
+    let highlighted_diff = HighlightedDiff::new(&app.current_diff, file_path);
+    let all_styled_lines = highlighted_diff.to_styled_lines();
+    
+    // Apply scrolling and viewport
+    let styled_lines: Vec<Line> = all_styled_lines
+        .into_iter()
         .skip(app.diff_scroll)
         .take(area.height.saturating_sub(2) as usize) // Account for borders
-        .map(|line| line.to_styled_line())
         .collect();
 
     let paragraph = Paragraph::new(styled_lines).block(block);
