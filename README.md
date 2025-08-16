@@ -14,29 +14,29 @@ I wrote this because I was badly missing this feature in 'Zed', my primary IDE. 
 
 ![Main screen](screenshots/geschichte-main.png)
 
-## ✨ Features
+## Features
 
 ### Core Functionality
-- 📁 **Interactive file picker** - Fuzzy search and select any tracked file with popup interface
-- 🔍 **File history visualization** with commit dates, hashes, authors, and subjects
-- 🔄 **Working directory support** - See uncommitted changes as the top entry
-- 🎯 **Interactive navigation** with vim-style keybindings and focus-aware panels
-- 🎨 **Colorized diffs** with visual highlighting for additions, deletions, and context
-- 📊 **Commit-to-commit diff** - Select any two commits to see changes between them
-- 🔀 **Rename tracking** - Follow files across renames and moves (with `--follow`)
-- ⚡ **Performance optimized** with LRU caching for instant diff switching
-- 🖥️ **Split-pane interface** with resizable panels and help overlay
+- **Interactive file picker** - Fuzzy search and select any tracked file with popup interface
+- **File history visualization** with commit dates, hashes, authors, and subjects
+- **Working directory support** - See uncommitted changes as the top entry
+- **Interactive navigation** with vim-style keybindings and focus-aware panels
+- **Colorized diffs** with visual highlighting for additions, deletions, and context
+- **Commit-to-commit diff** - Select any two commits to see changes between them
+- **Rename tracking** - Follow files across renames and moves (with `--follow`)
+- **Performance optimized** with LRU caching for instant diff switching
+- **Split-pane interface** with resizable panels and help overlay
 
 ### User Experience
-- 🔄 **Seamless file switching** - Switch between files without losing context using 'f' key
-- 🍎 **Mac-friendly navigation** - Multiple scroll options (PageUp/Down, Ctrl+D/U, Ctrl+F/B)
-- 🍎 **Mouse support** - Scrolling support with mouse
-- 📱 **Focus-aware controls** - Arrow keys work differently based on active panel
-- 🎹 **Comprehensive keybindings** - Vim, emacs, and traditional navigation styles
-- 🔧 **Merge commit handling** - Proper parent resolution for complex histories
-- ⚙️ **Configurable context** - Adjust diff context lines via CLI arguments
+- **Seamless file switching** - Switch between files without losing context using 'f' key
+- **Mac-friendly navigation** - Multiple scroll options (PageUp/Down, Ctrl+D/U, Ctrl+F/B)
+- **Mouse support** - Scrolling support with mouse
+- **Focus-aware controls** - Arrow keys work differently based on active panel
+- **Comprehensive keybindings** - Vim, emacs, and traditional navigation styles
+- **Merge commit handling** - Proper parent resolution for complex histories
+- **Configurable context** - Adjust diff context lines via CLI arguments
 
-## 🚀 Installation
+## Installation
 
 ### From Source (Current)
 ```bash
@@ -56,7 +56,7 @@ cargo install geschichte
 brew install geschichte
 ```
 
-## 📖 Usage
+## Usage
 
 ### Basic Usage
 ```bash
@@ -101,7 +101,7 @@ geschichte --no-follow large-file.txt
 geschichte --first-parent main.rs
 ```
 
-## ⌨️ Keybindings
+## Keybindings
 
 ### Navigation
 | Key | Action |
@@ -138,7 +138,7 @@ geschichte --first-parent main.rs
 | `?` | Show/hide help overlay |
 | `q` / `Esc` | Quit (context-aware) |
 
-## 📊 Commit-to-Commit Diff
+## Commit-to-Commit Diff
 
 Geschichte allows you to compare any two commits to see exactly what changed between them. This is perfect for understanding the evolution of your code across multiple commits.
 
@@ -176,7 +176,7 @@ The range diff works across any two commits - compare your working directory wit
 | `c` | Copy commit hash |
 | `m` | Cycle merge parents |
 
-## 🎨 Interface
+## Interface
 
 ### File Picker Mode
 ```
@@ -218,7 +218,7 @@ The range diff works across any two commits - compare your working directory wit
 [Range: 603c9b0..77942bc] Shows changes between two selected commits
 ```
 
-## 🎯 Why Geschichte?
+## Why Geschichte?
 
 **Fast & Focused**: Unlike heavyweight GUI tools, Geschichte is built for speed and terminal workflows.
 
@@ -230,20 +230,18 @@ The range diff works across any two commits - compare your working directory wit
 
 **Developer-Friendly**: Built by developers, for developers who live in the terminal.
 
-## 🛣️ Roadmap
+## 🛣Roadmap
 
 ### Upcoming Features
-- 🔍 **In-diff search** - Search within diff content with regex support
-- 🔄 **Merge parent cycling** - Navigate through merge commit parents
-- 📋 **Copy commit hash** - Quick clipboard integration
+- **In-diff search** - Search within diff content with regex support
+- **Merge parent cycling** - Navigate through merge commit parents
+- **Copy commit hash** - Quick clipboard integration
 
 ### Future Enhancements
-- 🎨 **Syntax highlighting** - Code-aware diff visualization
-- ⚙️ **Configuration files** - Customizable themes and keybindings
-- 📊 **Performance optimizations** - Handle massive repositories efficiently
-- 📱 **Side-by-side diff view** - Alternative layout option
+- **Performance optimizations** - Handle massive repositories efficiently
+- **Side-by-side diff view** - Alternative layout option
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
@@ -262,14 +260,14 @@ cargo clippy
 cargo fmt
 ```
 
-## 📊 Performance
+## Performance
 
 - **Startup time**: < 500ms for typical repositories
 - **Memory usage**: < 20MB for 1000+ commits
 - **Diff caching**: LRU cache holds 50 diffs for instant navigation
 - **Large repositories**: Tested with 10k+ commit histories
 
-## 🔧 Dependencies
+## Dependencies
 
 Built with these excellent Rust crates:
 - [ratatui](https://github.com/ratatui-org/ratatui) - Terminal UI framework
@@ -277,11 +275,11 @@ Built with these excellent Rust crates:
 - [clap](https://github.com/clap-rs/clap) - Command line parsing
 - [anyhow](https://github.com/dtolnay/anyhow) - Error handling
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Inspired by `tig`, `lazygit`, and other excellent terminal git tools
 - Built with the amazing Rust ecosystem
