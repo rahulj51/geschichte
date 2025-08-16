@@ -46,6 +46,8 @@ pub struct App {
     pub rename_map: HashMap<String, PathBuf>,
     pub current_diff: String,
     pub diff_scroll: usize,
+    pub diff_horizontal_scroll: usize,
+    pub commit_horizontal_scroll: usize,
     pub diff_cache: DiffCache,
     
     // UI state
@@ -87,6 +89,8 @@ impl App {
             rename_map: HashMap::new(),
             current_diff: String::new(),
             diff_scroll: 0,
+            diff_horizontal_scroll: 0,
+            commit_horizontal_scroll: 0,
             diff_cache: DiffCache::new(50),
             split_ratio: 0.4,
             show_help: false,
@@ -120,6 +124,8 @@ impl App {
             rename_map: HashMap::new(),
             current_diff: String::new(),
             diff_scroll: 0,
+            diff_horizontal_scroll: 0,
+            commit_horizontal_scroll: 0,
             diff_cache: DiffCache::new(50),
             split_ratio: 0.4, // 40% commits, 60% diff
             show_help: false,
@@ -143,6 +149,8 @@ impl App {
         self.rename_map.clear();
         self.current_diff.clear();
         self.diff_scroll = 0;
+        self.diff_horizontal_scroll = 0;
+        self.commit_horizontal_scroll = 0;
         self.diff_cache.clear();
         
         // Load git data for the new file
@@ -254,6 +262,7 @@ impl App {
         // Check cache first
         if let Some(cached_diff) = self.diff_cache.get(&commit.hash).cloned() {
             self.current_diff = cached_diff;
+            self.reset_diff_scroll();
             return Ok(());
         }
 
@@ -287,6 +296,7 @@ impl App {
         // Cache and store
         self.diff_cache.put(commit.hash.clone(), diff.clone());
         self.current_diff = diff;
+        self.reset_diff_scroll();
 
         Ok(())
     }
@@ -347,6 +357,32 @@ impl App {
         let diff_height = ((visible_height as f32) * (1.0 - self.split_ratio)) as usize;
         // Scroll by half a page for better readability
         diff_height.saturating_sub(2) / 2
+    }
+
+    // Horizontal scrolling methods
+    pub fn scroll_diff_left(&mut self) {
+        self.diff_horizontal_scroll = self.diff_horizontal_scroll.saturating_sub(4);
+    }
+    
+    pub fn scroll_diff_right(&mut self, max_width: usize) {
+        if self.diff_horizontal_scroll + 4 < max_width {
+            self.diff_horizontal_scroll += 4;
+        }
+    }
+    
+    pub fn scroll_commit_left(&mut self) {
+        self.commit_horizontal_scroll = self.commit_horizontal_scroll.saturating_sub(4);
+    }
+    
+    pub fn scroll_commit_right(&mut self, max_width: usize) {
+        if self.commit_horizontal_scroll + 4 < max_width {
+            self.commit_horizontal_scroll += 4;
+        }
+    }
+    
+    pub fn reset_diff_scroll(&mut self) {
+        self.diff_scroll = 0;
+        self.diff_horizontal_scroll = 0;
     }
 
     pub fn update_terminal_height(&mut self, height: u16) {
@@ -443,7 +479,7 @@ impl App {
         // Check cache first
         if let Some(cached_diff) = self.diff_cache.get(&cache_key) {
             self.current_diff = cached_diff.clone();
-            self.diff_scroll = 0;
+            self.reset_diff_scroll();
             return Ok(());
         }
 
@@ -465,7 +501,7 @@ impl App {
         // Cache and set the diff
         self.diff_cache.put(cache_key, diff.clone());
         self.current_diff = diff;
-        self.diff_scroll = 0;
+        self.reset_diff_scroll();
         
         // Store the current range for UI display
         self.current_diff_range = Some((older_index, newer_index));
@@ -536,6 +572,29 @@ impl App {
             (KeyCode::Char('f'), KeyModifiers::CONTROL) => {
                 // Ctrl+F = Page Down (emacs-style)
                 self.scroll_diff_page_down();
+            }
+            // Horizontal scrolling
+            (KeyCode::Char('a'), KeyModifiers::NONE) => {
+                if let Some(focused_panel) = self.get_focused_panel() {
+                    match focused_panel {
+                        FocusedPanel::Commits => self.scroll_commit_left(),
+                        FocusedPanel::Diff => self.scroll_diff_left(),
+                    }
+                }
+            }
+            (KeyCode::Char('s'), KeyModifiers::NONE) => {
+                if let Some(focused_panel) = self.get_focused_panel() {
+                    match focused_panel {
+                        FocusedPanel::Commits => {
+                            let max_width = self.calculate_max_commit_line_width();
+                            self.scroll_commit_right(max_width);
+                        }
+                        FocusedPanel::Diff => {
+                            let max_width = self.calculate_max_diff_line_width();
+                            self.scroll_diff_right(max_width);
+                        }
+                    }
+                }
             }
             (KeyCode::Char('h'), KeyModifiers::NONE) => {
                 self.decrease_split_ratio();
@@ -644,5 +703,22 @@ impl App {
             _ => {}
         }
         Ok(())
+    }
+    
+    // Helper functions for calculating content width
+    fn calculate_max_diff_line_width(&self) -> usize {
+        self.current_diff
+            .lines()
+            .map(|line| line.chars().count())
+            .max()
+            .unwrap_or(0)
+    }
+    
+    fn calculate_max_commit_line_width(&self) -> usize {
+        self.commits
+            .iter()
+            .map(|commit| format!("{} {}", commit.hash, commit.subject).chars().count())
+            .max()
+            .unwrap_or(0)
     }
 }

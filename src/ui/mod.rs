@@ -48,11 +48,16 @@ fn draw_history_ui(frame: &mut Frame, app: &App) {
 }
 
 fn draw_commits_panel(frame: &mut Frame, app: &App, area: Rect) {
-    let title = if app.loading {
-        " Commits (Loading...) "
+    let mut title = if app.loading {
+        " Commits (Loading...) ".to_string()
     } else {
-        &format!(" Commits ({}) ", app.commits.len())
+        format!(" Commits ({}) ", app.commits.len())
     };
+    
+    // Add horizontal scroll indicator
+    if app.commit_horizontal_scroll > 0 {
+        title = format!("{} ←→", title.trim_end());
+    }
 
     let focused = app.get_focused_panel() == Some(FocusedPanel::Commits);
     let border_style = if focused {
@@ -91,30 +96,34 @@ fn draw_commits_panel(frame: &mut Frame, app: &App, area: Rect) {
                 ""
             };
 
-            if commit.is_working_directory {
+            let line = if commit.is_working_directory {
                 // Special styling for working directory
-                ListItem::new(Line::from(vec![
-                    Span::styled(marker, Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
-                    Span::styled("Working", Style::default().fg(Color::Magenta)),
+                Line::from(vec![
+                    Span::styled(marker.to_string(), Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+                    Span::styled("Working".to_string(), Style::default().fg(Color::Magenta)),
                     Span::raw(" "),
-                    Span::styled("Dir", Style::default().fg(Color::Magenta)),
+                    Span::styled("Dir".to_string(), Style::default().fg(Color::Magenta)),
                     Span::raw(" "),
                     Span::styled(
-                        truncate_text(&commit.subject, 50),
+                        commit.subject.clone(), // Don't truncate here, let horizontal scroll handle it
                         Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)
                     ),
-                ]))
+                ])
             } else {
                 // Regular commit styling
-                ListItem::new(Line::from(vec![
-                    Span::styled(marker, Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
-                    Span::styled(&commit.date, Style::default().fg(Color::Yellow)),
+                Line::from(vec![
+                    Span::styled(marker.to_string(), Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+                    Span::styled(commit.date.clone(), Style::default().fg(Color::Yellow)),
                     Span::raw(" "),
-                    Span::styled(&commit.short_hash, Style::default().fg(Color::Cyan)),
+                    Span::styled(commit.short_hash.clone(), Style::default().fg(Color::Cyan)),
                     Span::raw(" "),
-                    Span::raw(truncate_text(&commit.subject, 50)),
-                ]))
-            }
+                    Span::raw(commit.subject.clone()), // Don't truncate here, let horizontal scroll handle it
+                ])
+            };
+            
+            // Apply horizontal scrolling to commit line
+            let scrolled_line = apply_horizontal_scroll(line, app.commit_horizontal_scroll, area.width.saturating_sub(2) as usize);
+            ListItem::new(scrolled_line)
         })
         .collect();
 
@@ -133,7 +142,7 @@ fn draw_commits_panel(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_diff_panel(frame: &mut Frame, app: &App, area: Rect) {
-    let title = if app.commits.is_empty() {
+    let mut title = if app.commits.is_empty() {
         " Diff ".to_string()
     } else if app.selected_index < app.commits.len() {
         // Check if we're showing a range diff
@@ -154,6 +163,11 @@ fn draw_diff_panel(frame: &mut Frame, app: &App, area: Rect) {
     } else {
         " Diff ".to_string()
     };
+    
+    // Add horizontal scroll indicator
+    if app.diff_horizontal_scroll > 0 {
+        title = format!("{} ←→", title.trim_end());
+    }
 
     let focused = app.get_focused_panel() == Some(FocusedPanel::Diff);
     let border_style = if focused {
@@ -190,11 +204,12 @@ fn draw_diff_panel(frame: &mut Frame, app: &App, area: Rect) {
     let highlighted_diff = HighlightedDiff::new(&app.current_diff, file_path);
     let all_styled_lines = highlighted_diff.to_styled_lines();
     
-    // Apply scrolling and viewport
+    // Apply both vertical AND horizontal scrolling
     let styled_lines: Vec<Line> = all_styled_lines
         .into_iter()
-        .skip(app.diff_scroll)
+        .skip(app.diff_scroll) // Vertical scroll
         .take(area.height.saturating_sub(2) as usize) // Account for borders
+        .map(|line| apply_horizontal_scroll(line, app.diff_horizontal_scroll, area.width as usize))
         .collect();
 
     let paragraph = Paragraph::new(styled_lines).block(block);
@@ -203,8 +218,8 @@ fn draw_diff_panel(frame: &mut Frame, app: &App, area: Rect) {
 
 fn draw_status_bar(frame: &mut Frame, app: &App, area: Rect) {
     let focus_hint = match app.get_focused_panel() {
-        Some(FocusedPanel::Commits) => "↑↓/jk: select commit",
-        Some(FocusedPanel::Diff) => "↑↓/jk: scroll diff",
+        Some(FocusedPanel::Commits) => "↑↓/jk: select commit | a/s: h-scroll",
+        Some(FocusedPanel::Diff) => "↑↓/jk: scroll diff | a/s: h-scroll",
         None => "Type to search files",
     };
 
@@ -231,7 +246,7 @@ fn draw_status_bar(frame: &mut Frame, app: &App, area: Rect) {
 fn draw_help_overlay(frame: &mut Frame, _app: &App, area: Rect) {
     // Calculate popup size - center it
     let popup_width = 50;
-    let popup_height = 17;
+    let popup_height = 18;
     let x = (area.width.saturating_sub(popup_width)) / 2;
     let y = (area.height.saturating_sub(popup_height)) / 2;
     
@@ -274,6 +289,10 @@ fn draw_help_overlay(frame: &mut Frame, _app: &App, area: Rect) {
         Line::from(vec![
             Span::styled("^B/^F", Style::default().fg(Color::Yellow)),
             Span::raw("    Scroll diff (emacs-style)"),
+        ]),
+        Line::from(vec![
+            Span::styled("a/s", Style::default().fg(Color::Yellow)),
+            Span::raw("      Horizontal scroll (left/right)"),
         ]),
         Line::from(""),
         Line::from(vec![
@@ -326,4 +345,62 @@ fn truncate_text(text: &str, max_len: usize) -> String {
     } else {
         format!("{}...", &text[..max_len.saturating_sub(3)])
     }
+}
+
+/// Apply horizontal scrolling to a line
+fn apply_horizontal_scroll(line: Line<'static>, horizontal_offset: usize, viewport_width: usize) -> Line<'static> {
+    // Calculate total line width in characters
+    let total_width: usize = line.spans.iter()
+        .map(|span| span.content.chars().count())
+        .sum();
+    
+    // If no horizontal offset, return original line
+    if horizontal_offset == 0 {
+        return line;
+    }
+    
+    // Always apply horizontal scrolling regardless of line length
+    // This ensures visual alignment of all lines
+    
+    // If the horizontal offset is greater than the total line width,
+    // return an empty line (the line is scrolled completely out of view)
+    if horizontal_offset >= total_width {
+        return Line::from(vec![]);
+    }
+    
+    // Apply horizontal offset by trimming characters from the start
+    let mut char_count = 0;
+    let mut new_spans = Vec::new();
+    let mut remaining_offset = horizontal_offset;
+    
+    for span in line.spans {
+        let span_char_count = span.content.chars().count();
+        
+        if remaining_offset >= span_char_count {
+            // Skip this entire span
+            remaining_offset -= span_char_count;
+            continue;
+        }
+        
+        // Partial span - trim from the start
+        let trimmed_content: String = span.content
+            .chars()
+            .skip(remaining_offset)
+            .take(viewport_width.saturating_sub(char_count))
+            .collect();
+        
+        if !trimmed_content.is_empty() {
+            new_spans.push(Span::styled(trimmed_content.clone(), span.style));
+            char_count += trimmed_content.chars().count();
+            
+            // Stop if we've filled the viewport
+            if char_count >= viewport_width {
+                break;
+            }
+        }
+        
+        remaining_offset = 0; // Used up the offset
+    }
+    
+    Line::from(new_spans)
 }
