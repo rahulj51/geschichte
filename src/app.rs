@@ -1,5 +1,7 @@
 use crate::cache::DiffCache;
+use crate::cli::LayoutMode;
 use crate::commit::Commit;
+use crate::diff::side_by_side::SideBySideDiff;
 use crate::error::Result;
 use crate::ui::file_picker::FilePickerState;
 use std::collections::HashMap;
@@ -45,12 +47,14 @@ pub struct App {
     pub selected_index: usize,
     pub rename_map: HashMap<String, PathBuf>,
     pub current_diff: String,
+    pub current_side_by_side_diff: Option<SideBySideDiff>,
     pub diff_scroll: usize,
     pub diff_horizontal_scroll: usize,
     pub commit_horizontal_scroll: usize,
     pub diff_cache: DiffCache,
     
     // UI state
+    pub layout_mode: LayoutMode,
     pub split_ratio: f32,
     pub show_help: bool,
     pub loading: bool,
@@ -64,11 +68,26 @@ pub struct App {
 }
 
 impl App {
+    /// Get the effective layout mode based on terminal width (for Auto mode)
+    pub fn effective_layout(&self) -> LayoutMode {
+        match self.layout_mode {
+            LayoutMode::Auto => {
+                // Use side-by-side if terminal is wide enough (120+ columns)
+                if self.terminal_width >= 120 {
+                    LayoutMode::SideBySide
+                } else {
+                    LayoutMode::Unified
+                }
+            },
+            other => other,
+        }
+    }
     pub fn new_file_picker(
         repo_root: PathBuf,
         context_lines: u32,
         follow_renames: bool,
         first_parent: bool,
+        layout_mode: LayoutMode,
     ) -> Result<Self> {
         use crate::git::files::get_git_files;
         
@@ -89,10 +108,12 @@ impl App {
             selected_index: 0,
             rename_map: HashMap::new(),
             current_diff: String::new(),
+            current_side_by_side_diff: None,
             diff_scroll: 0,
             diff_horizontal_scroll: 0,
             commit_horizontal_scroll: 0,
             diff_cache: DiffCache::new(50),
+            layout_mode,
             split_ratio: 0.4,
             show_help: false,
             loading: false,
@@ -110,6 +131,7 @@ impl App {
         context_lines: u32,
         follow_renames: bool,
         first_parent: bool,
+        layout_mode: LayoutMode,
     ) -> Self {
         Self {
             repo_root,
@@ -125,10 +147,12 @@ impl App {
             selected_index: 0,
             rename_map: HashMap::new(),
             current_diff: String::new(),
+            current_side_by_side_diff: None,
             diff_scroll: 0,
             diff_horizontal_scroll: 0,
             commit_horizontal_scroll: 0,
             diff_cache: DiffCache::new(50),
+            layout_mode,
             split_ratio: 0.4, // 40% commits, 60% diff
             show_help: false,
             loading: false,
@@ -151,6 +175,7 @@ impl App {
         self.selected_index = 0;
         self.rename_map.clear();
         self.current_diff.clear();
+        self.current_side_by_side_diff = None;
         self.diff_scroll = 0;
         self.diff_horizontal_scroll = 0;
         self.commit_horizontal_scroll = 0;
@@ -264,7 +289,8 @@ impl App {
         
         // Check cache first
         if let Some(cached_diff) = self.diff_cache.get(&commit.hash).cloned() {
-            self.current_diff = cached_diff;
+            self.current_diff = cached_diff.clone();
+            self.update_side_by_side_diff(&cached_diff);
             self.reset_diff_scroll();
             return Ok(());
         }
@@ -298,10 +324,24 @@ impl App {
 
         // Cache and store
         self.diff_cache.put(commit.hash.clone(), diff.clone());
-        self.current_diff = diff;
+        self.current_diff = diff.clone();
+        self.update_side_by_side_diff(&diff);
+        
         self.reset_diff_scroll();
 
         Ok(())
+    }
+
+    /// Update the side-by-side diff representation
+    fn update_side_by_side_diff(&mut self, diff: &str) {
+        if matches!(self.effective_layout(), LayoutMode::SideBySide) {
+            use crate::diff::HighlightedDiff;
+            let highlighted_diff = HighlightedDiff::new(diff, self.get_file_path().map(|p| p.as_path()));
+            self.current_side_by_side_diff = Some(SideBySideDiff::from_unified(&highlighted_diff.lines));
+        } else {
+            // Clear side-by-side diff when not needed
+            self.current_side_by_side_diff = None;
+        }
     }
 
     pub fn quit(&mut self) {
@@ -393,8 +433,16 @@ impl App {
     }
 
     pub fn handle_resize(&mut self, width: u16, height: u16) {
+        let old_effective_layout = self.effective_layout();
+        
         self.terminal_height = height;
         self.terminal_width = width;
+        
+        // Check if effective layout changed (for Auto mode)
+        let new_effective_layout = self.effective_layout();
+        if old_effective_layout != new_effective_layout && !self.current_diff.is_empty() {
+            self.update_side_by_side_diff(&self.current_diff.clone());
+        }
         
         // Recalculate scroll bounds if window got smaller
         if self.diff_horizontal_scroll > width as usize {
@@ -493,9 +541,11 @@ impl App {
         let cache_key = format!("{}..{}", older_commit.hash, newer_commit.hash);
         
         // Check cache first
-        if let Some(cached_diff) = self.diff_cache.get(&cache_key) {
+        if let Some(cached_diff) = self.diff_cache.get(&cache_key).cloned() {
             self.current_diff = cached_diff.clone();
+            self.update_side_by_side_diff(&cached_diff);
             self.reset_diff_scroll();
+            self.current_diff_range = Some((older_index, newer_index));
             return Ok(());
         }
 
@@ -516,7 +566,8 @@ impl App {
 
         // Cache and set the diff
         self.diff_cache.put(cache_key, diff.clone());
-        self.current_diff = diff;
+        self.current_diff = diff.clone();
+        self.update_side_by_side_diff(&diff);
         self.reset_diff_scroll();
         
         // Store the current range for UI display

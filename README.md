@@ -10,9 +10,15 @@ Geschichte (German for "history") is a fast, keyboard-driven terminal UI for exp
 
 Unlike full-featured git clients, Geschichte focuses specifically on **single-file history exploration**. It's designed for developers who want to quickly understand how a particular file changed over time, not for managing branches, commits, or other git operations. Think of it as a specialized tool that does one thing exceptionally well: showing you the story of your file.
 
-I wrote this because I was badly missing this feature in 'Zed', my primary IDE. Geschichte can be opened in a terminal window in your favorite IDE. 
+I wrote this because I was badly missing this feature in 'Zed', my primary IDE. Geschichte can be opened in a terminal window in your favorite IDE.
 
+### Screenshots
+**Default view with file picker and commit history**
 ![Main screen](screenshots/geschichte-main.png)
+
+
+**Side by side view**
+![Main screen side-by-side](screenshots/geschichte-side-by-side.png)
 
 ## Features
 
@@ -26,6 +32,7 @@ I wrote this because I was badly missing this feature in 'Zed', my primary IDE. 
 - **Rename tracking** - Follow files across renames and moves (with `--follow`)
 - **Performance optimized** with LRU caching for instant diff switching
 - **Split-pane interface** with resizable panels and help overlay
+- **Side-by-side diff view** - Three-panel layout with old/new file comparison
 
 ### User Experience
 - **Seamless file switching** - Switch between files without losing context using 'f' key
@@ -79,6 +86,8 @@ Arguments:
 Options:
   -C, --repo <DIR>             Repository root directory (auto-discovered if not specified)
   -L, --lines <CONTEXT_LINES>  Number of context lines in diffs [default: 3]
+  -s, --side-by-side           Enable side-by-side diff view (three-panel layout)
+      --layout <MODE>          Layout mode: unified, side-by-side, or auto [default: unified]
       --first-parent           Show only first-parent commits (linearize merges)
       --no-follow              Disable rename tracking
       --debug                  Enable debug logging
@@ -91,6 +100,13 @@ Options:
 # Open file picker to browse all tracked files
 geschichte
 
+# Side-by-side diff view (three-panel layout)
+geschichte --side-by-side src/main.rs
+geschichte -s README.md
+
+# Auto layout mode (switches based on terminal width)
+geschichte --layout auto src/app.rs
+
 # More context in diffs
 geschichte -L 10 src/main.rs
 
@@ -99,6 +115,9 @@ geschichte --no-follow large-file.txt
 
 # Linear history only (ignore merge commits)
 geschichte --first-parent main.rs
+
+# Combine options
+geschichte -s -L 5 --first-parent src/main.rs
 ```
 
 ## Keybindings
@@ -138,6 +157,47 @@ geschichte --first-parent main.rs
 | `?` | Show/hide help overlay |
 | `q` / `Esc` | Quit (context-aware) |
 
+## Side-by-Side Diff View
+
+Geschichte offers a powerful three-panel layout that shows old and new file versions side-by-side, making it easier to compare changes visually.
+
+### Layout Modes
+
+- **Unified (default)**: Traditional two-panel layout with commits on left, unified diff on right
+- **Side-by-Side**: Three-panel layout with old/new files on top, commits on bottom
+- **Auto**: Automatically switches based on terminal width (≥120 characters for side-by-side)
+
+### Three-Panel Layout Structure
+
+```
+┌─ Old File (deletions) ────────┐┌─ New File (additions) ─────────┐
+│  1  fn calculate() {           ││  1  fn calculate(x: i32) {     │
+│  2 -    let result = 10;       ││  2 +    let result = x * 2;    │
+│  3      println!("{}", result);││  3      println!("{}", result);│
+│                                ││  4 +    // Return the value    │
+│                                ││  5 +    result                 │
+├────────────────────────────────┴─────────────────────────────────┤
+│ > Working Dir  Modified                                          │
+│   2025-08-17  abc123  Add parameter to calculate function        │
+│   2025-08-16  def456  Initial implementation                     │
+└───────────────────────────────────────────────────────────────────┘
+```
+
+### Features in Side-by-Side Mode
+
+- **Syntax highlighting**: Full language-aware highlighting in both panels
+- **Line numbers**: Accurate line numbers for old and new versions
+- **Background colors**: Deletions highlighted in red (left), additions in green (right)
+- **Synchronized scrolling**: Both panels scroll together for easy comparison
+- **Dynamic titles**: Panel headers show commit hashes being compared
+- **Full feature parity**: All unified mode features work in side-by-side mode
+
+### When to Use Each Mode
+
+- **Unified mode**: Better for reviewing overall changes, seeing context, and narrow terminals
+- **Side-by-side mode**: Ideal for comparing implementations, refactoring reviews, and wide screens
+- **Auto mode**: Let Geschichte choose the best layout based on your terminal size
+
 ## Commit-to-Commit Diff
 
 Geschichte allows you to compare any two commits to see exactly what changed between them. This is perfect for understanding the evolution of your code across multiple commits.
@@ -151,7 +211,7 @@ Geschichte allows you to compare any two commits to see exactly what changed bet
 
 ### Visual Indicators
 
-- **Green `► ` arrow**: Shows which commit is marked for comparison  
+- **Green `► ` arrow**: Shows which commit is marked for comparison
 - **Header format**: `Diff (older..newer)` shows the range being compared
 - **Selection mode**: `Diff (abc123) [Selecting...]` when first commit is marked
 - **Chronological order**: Always shows older→newer regardless of selection order
@@ -161,7 +221,7 @@ Geschichte allows you to compare any two commits to see exactly what changed bet
 ```bash
 # 1. Navigate to an older commit (bottom of history)
 # 2. Press 'd' → see green arrow marker
-# 3. Navigate to newer commit (top of history)  
+# 3. Navigate to newer commit (top of history)
 # 4. Press 'd' → see diff between the commits
 # 5. Green lines show code added in newer commit
 # 6. Red lines show code removed from older commit
@@ -240,6 +300,9 @@ The range diff works across any two commits - compare your working directory wit
 ### Future Enhancements
 - **Performance optimizations** - Handle massive repositories efficiently
 - **Side-by-side diff view** - Alternative layout option
+- **Enhanced syntax highlighting** - More language support and themes
+- **Configuration files** - Customizable themes and keybindings
+- **Blame view** - See who changed each line and when
 
 ## Contributing
 

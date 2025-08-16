@@ -56,6 +56,9 @@ fn run(args: cli::Args) -> Result<()> {
 
     log::debug!("Found git repository at: {}", repo_root.display());
 
+    // Get the effective layout mode
+    let layout_mode = args.effective_layout();
+
     // Create application state based on whether file argument was provided
     let mut app = if let Some(file_path_arg) = args.file_path {
         // File argument provided - use history mode
@@ -75,6 +78,7 @@ fn run(args: cli::Args) -> Result<()> {
             args.context_lines,
             !args.no_follow,
             args.first_parent,
+            layout_mode,
         );
 
         // Load git data
@@ -91,6 +95,7 @@ fn run(args: cli::Args) -> Result<()> {
             args.context_lines,
             !args.no_follow,
             args.first_parent,
+            layout_mode,
         ) {
             Ok(app) => app,
             Err(e) => {

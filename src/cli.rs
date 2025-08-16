@@ -1,5 +1,15 @@
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use std::path::PathBuf;
+
+#[derive(Clone, Copy, Debug, PartialEq, ValueEnum)]
+pub enum LayoutMode {
+    /// Traditional unified diff view (two panels)
+    Unified,
+    /// Side-by-side diff view (three panels)
+    SideBySide,
+    /// Automatically choose based on terminal size
+    Auto,
+}
 
 #[derive(Parser, Debug)]
 #[command(
@@ -33,6 +43,13 @@ pub struct Args {
     #[arg(long = "debug")]
     pub debug: bool,
 
+    /// Enable side-by-side diff view (three-panel layout)
+    #[arg(short = 's', long = "side-by-side")]
+    pub side_by_side: bool,
+
+    /// Layout mode for the UI
+    #[arg(long = "layout", value_enum, default_value = "unified")]
+    pub layout: LayoutMode,
 }
 
 impl Args {
@@ -41,7 +58,16 @@ impl Args {
             return Err("Context lines must be between 0 and 100".to_string());
         }
 
-
         Ok(())
+    }
+
+    /// Get the effective layout mode, considering both --side-by-side flag and --layout option
+    pub fn effective_layout(&self) -> LayoutMode {
+        // --side-by-side flag takes precedence for backwards compatibility
+        if self.side_by_side {
+            LayoutMode::SideBySide
+        } else {
+            self.layout
+        }
     }
 }

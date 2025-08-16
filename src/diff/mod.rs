@@ -1,11 +1,12 @@
 pub mod parser;
+pub mod side_by_side;
 pub mod syntax;
 
 use ratatui::style::{Color, Style, Modifier};
 use ratatui::text::{Line, Span};
 use std::path::Path;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DiffLineType {
     Header,
     HunkHeader,
