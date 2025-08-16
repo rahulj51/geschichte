@@ -56,6 +56,7 @@ pub struct App {
     pub loading: bool,
     pub error_message: Option<String>,
     pub terminal_height: u16,
+    pub terminal_width: u16,
     
     // Diff range selection
     pub diff_range_start: Option<usize>,
@@ -97,6 +98,7 @@ impl App {
             loading: false,
             error_message: None,
             terminal_height: 24,
+            terminal_width: 80,
             diff_range_start: None,
             current_diff_range: None,
         })
@@ -132,6 +134,7 @@ impl App {
             loading: false,
             error_message: None,
             terminal_height: 24,
+            terminal_width: 80,
             diff_range_start: None,
             current_diff_range: None,
         }
@@ -387,6 +390,19 @@ impl App {
 
     pub fn update_terminal_height(&mut self, height: u16) {
         self.terminal_height = height;
+    }
+
+    pub fn handle_resize(&mut self, width: u16, height: u16) {
+        self.terminal_height = height;
+        self.terminal_width = width;
+        
+        // Recalculate scroll bounds if window got smaller
+        if self.diff_horizontal_scroll > width as usize {
+            self.diff_horizontal_scroll = (width as usize).saturating_sub(10);
+        }
+        if self.commit_horizontal_scroll > width as usize {
+            self.commit_horizontal_scroll = (width as usize).saturating_sub(10);
+        }
     }
 
     pub fn switch_focus(&mut self) {
@@ -706,7 +722,7 @@ impl App {
     }
     
     // Helper functions for calculating content width
-    fn calculate_max_diff_line_width(&self) -> usize {
+    pub fn calculate_max_diff_line_width(&self) -> usize {
         self.current_diff
             .lines()
             .map(|line| line.chars().count())
@@ -714,7 +730,7 @@ impl App {
             .unwrap_or(0)
     }
     
-    fn calculate_max_commit_line_width(&self) -> usize {
+    pub fn calculate_max_commit_line_width(&self) -> usize {
         self.commits
             .iter()
             .map(|commit| format!("{} {}", commit.hash, commit.subject).chars().count())

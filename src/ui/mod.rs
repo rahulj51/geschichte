@@ -218,8 +218,8 @@ fn draw_diff_panel(frame: &mut Frame, app: &App, area: Rect) {
 
 fn draw_status_bar(frame: &mut Frame, app: &App, area: Rect) {
     let focus_hint = match app.get_focused_panel() {
-        Some(FocusedPanel::Commits) => "↑↓/jk: select commit | a/s: h-scroll",
-        Some(FocusedPanel::Diff) => "↑↓/jk: scroll diff | a/s: h-scroll",
+        Some(FocusedPanel::Commits) => "↑↓/jk: select commit | a/s: h-scroll | mouse: scroll/click",
+        Some(FocusedPanel::Diff) => "↑↓/jk: scroll diff | a/s: h-scroll | mouse: scroll",
         None => "Type to search files",
     };
 
@@ -246,7 +246,7 @@ fn draw_status_bar(frame: &mut Frame, app: &App, area: Rect) {
 fn draw_help_overlay(frame: &mut Frame, _app: &App, area: Rect) {
     // Calculate popup size - center it
     let popup_width = 50;
-    let popup_height = 18;
+    let popup_height = 19;
     let x = (area.width.saturating_sub(popup_width)) / 2;
     let y = (area.height.saturating_sub(popup_height)) / 2;
     
@@ -293,6 +293,10 @@ fn draw_help_overlay(frame: &mut Frame, _app: &App, area: Rect) {
         Line::from(vec![
             Span::styled("a/s", Style::default().fg(Color::Yellow)),
             Span::raw("      Horizontal scroll (left/right)"),
+        ]),
+        Line::from(vec![
+            Span::styled("Mouse", Style::default().fg(Color::Yellow)),
+            Span::raw("     Wheel scroll, click to focus/select"),
         ]),
         Line::from(""),
         Line::from(vec![

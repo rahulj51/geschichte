@@ -10,7 +10,7 @@ mod ui;
 
 use anyhow::Result;
 use clap::Parser;
-use crossterm::event::{self, Event};
+use crossterm::event::{self, Event, MouseEvent, MouseEventKind, MouseButton, EnableMouseCapture, DisableMouseCapture};
 use std::time::Duration;
 
 fn main() -> Result<()> {
@@ -103,8 +103,14 @@ fn run(args: cli::Args) -> Result<()> {
     // Setup terminal
     let mut terminal = terminal::setup_terminal()?;
 
+    // Enable mouse capture
+    crossterm::execute!(std::io::stdout(), EnableMouseCapture)?;
+
     // Run the UI loop
     let result = run_ui(&mut terminal, &mut app);
+
+    // Cleanup: disable mouse capture
+    crossterm::execute!(std::io::stdout(), DisableMouseCapture)?;
 
     // Restore terminal
     terminal::restore_terminal(&mut terminal)?;
@@ -116,15 +122,24 @@ fn run_ui(terminal: &mut terminal::AppTerminal, app: &mut app::App) -> Result<()
     loop {
         // Draw the UI
         terminal.draw(|frame| {
-            // Update terminal height before drawing
-            app.update_terminal_height(frame.area().height);
+            // Update terminal dimensions before drawing
+            app.handle_resize(frame.area().width, frame.area().height);
             ui::draw(frame, app);
         })?;
 
         // Handle events
         if event::poll(Duration::from_millis(100))? {
-            if let Event::Key(key) = event::read()? {
-                app.handle_key(key)?;
+            match event::read()? {
+                Event::Key(key) => {
+                    app.handle_key(key)?;
+                }
+                Event::Mouse(mouse_event) => {
+                    handle_mouse_event(app, mouse_event)?;
+                }
+                Event::Resize(width, height) => {
+                    app.handle_resize(width, height);
+                }
+                _ => {}
             }
         }
 
@@ -134,5 +149,138 @@ fn run_ui(terminal: &mut terminal::AppTerminal, app: &mut app::App) -> Result<()
         }
     }
 
+    Ok(())
+}
+
+#[derive(Debug, PartialEq)]
+enum PanelType {
+    Commits,
+    Diff,
+}
+
+fn get_panel_at_position(app: &app::App, col: u16, _row: u16) -> Option<PanelType> {
+    // Calculate panel boundaries based on split ratio and actual terminal width
+    let split_ratio = app.split_ratio;
+    let terminal_width = app.terminal_width;
+    let split_point = (terminal_width as f32 * split_ratio) as u16;
+    
+    if col < split_point {
+        Some(PanelType::Commits)
+    } else {
+        Some(PanelType::Diff)
+    }
+}
+
+fn get_commit_at_row(app: &app::App, row: u16) -> Option<usize> {
+    // Calculate which commit corresponds to the clicked row
+    // Account for:
+    // - Panel borders (typically 1 row at top)
+    // - Title row is inside the border
+    
+    if row <= 1 {
+        return None; // Clicked on border or title
+    }
+    
+    let commit_row = row.saturating_sub(2); // Account for border and title
+    let commit_index = commit_row as usize;
+    
+    if commit_index < app.commits.len() {
+        Some(commit_index)
+    } else {
+        None
+    }
+}
+
+fn handle_mouse_event(app: &mut app::App, mouse_event: MouseEvent) -> Result<()> {
+    // Only handle mouse events in history mode
+    if !matches!(app.mode, app::AppMode::History { .. }) {
+        return Ok(());
+    }
+
+    match mouse_event.kind {
+        MouseEventKind::ScrollUp => {
+            match get_panel_at_position(app, mouse_event.column, mouse_event.row) {
+                Some(PanelType::Diff) => {
+                    app.scroll_diff_up();
+                }
+                Some(PanelType::Commits) => {
+                    if app.selected_index > 0 {
+                        app.move_selection_up()?;
+                    }
+                }
+                None => {}
+            }
+        }
+        MouseEventKind::ScrollDown => {
+            match get_panel_at_position(app, mouse_event.column, mouse_event.row) {
+                Some(PanelType::Diff) => {
+                    app.scroll_diff_down();
+                }
+                Some(PanelType::Commits) => {
+                    if app.selected_index + 1 < app.commits.len() {
+                        app.move_selection_down()?;
+                    }
+                }
+                None => {}
+            }
+        }
+        MouseEventKind::ScrollLeft => {
+            // Horizontal scrolling (if terminal supports it)
+            match get_panel_at_position(app, mouse_event.column, mouse_event.row) {
+                Some(PanelType::Diff) => {
+                    app.scroll_diff_left();
+                }
+                Some(PanelType::Commits) => {
+                    app.scroll_commit_left();
+                }
+                None => {}
+            }
+        }
+        MouseEventKind::ScrollRight => {
+            // Horizontal scrolling (if terminal supports it)
+            match get_panel_at_position(app, mouse_event.column, mouse_event.row) {
+                Some(PanelType::Diff) => {
+                    let max_width = app.calculate_max_diff_line_width();
+                    app.scroll_diff_right(max_width);
+                }
+                Some(PanelType::Commits) => {
+                    let max_width = app.calculate_max_commit_line_width();
+                    app.scroll_commit_right(max_width);
+                }
+                None => {}
+            }
+        }
+        MouseEventKind::Down(MouseButton::Left) => {
+            handle_mouse_click(app, mouse_event.column, mouse_event.row)?;
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+fn handle_mouse_click(app: &mut app::App, col: u16, row: u16) -> Result<()> {
+    match get_panel_at_position(app, col, row) {
+        Some(PanelType::Commits) => {
+            // Switch focus to commits panel
+            if let app::AppMode::History { ref mut focused_panel, .. } = app.mode {
+                *focused_panel = app::FocusedPanel::Commits;
+            }
+            
+            // Click-to-select commit
+            if let Some(commit_index) = get_commit_at_row(app, row) {
+                if commit_index != app.selected_index {
+                    app.selected_index = commit_index;
+                    app.load_diff_for_selected_commit()?;
+                }
+            }
+        }
+        Some(PanelType::Diff) => {
+            // Switch focus to diff panel
+            if let app::AppMode::History { ref mut focused_panel, .. } = app.mode {
+                *focused_panel = app::FocusedPanel::Diff;
+            }
+        }
+        None => {}
+    }
     Ok(())
 }
