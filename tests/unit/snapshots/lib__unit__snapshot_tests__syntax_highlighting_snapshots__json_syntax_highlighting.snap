@@ -1,0 +1,110 @@
+---
+source: tests/unit/snapshot_tests.rs
+expression: snapshot_data
+---
+[
+    (
+        "{",
+        "Style { fg: Some(Rgb(50, 50, 50)), bg: None, underline_color: None, add_modifier: NONE, sub_modifier: NONE }",
+    ),
+    (
+        "\"",
+        "Style { fg: Some(Rgb(24, 54, 145)), bg: None, underline_color: None, add_modifier: BOLD, sub_modifier: NONE }",
+    ),
+    (
+        "name",
+        "Style { fg: Some(Rgb(24, 54, 145)), bg: None, underline_color: None, add_modifier: BOLD, sub_modifier: NONE }",
+    ),
+    (
+        "\"",
+        "Style { fg: Some(Rgb(24, 54, 145)), bg: None, underline_color: None, add_modifier: BOLD, sub_modifier: NONE }",
+    ),
+    (
+        ":",
+        "Style { fg: Some(Rgb(50, 50, 50)), bg: None, underline_color: None, add_modifier: NONE, sub_modifier: NONE }",
+    ),
+    (
+        " ",
+        "Style { fg: Some(Rgb(50, 50, 50)), bg: None, underline_color: None, add_modifier: NONE, sub_modifier: NONE }",
+    ),
+    (
+        "\"",
+        "Style { fg: Some(Rgb(50, 50, 50)), bg: None, underline_color: None, add_modifier: NONE, sub_modifier: NONE }",
+    ),
+    (
+        "test",
+        "Style { fg: Some(Rgb(50, 50, 50)), bg: None, underline_color: None, add_modifier: NONE, sub_modifier: NONE }",
+    ),
+    (
+        "\"",
+        "Style { fg: Some(Rgb(50, 50, 50)), bg: None, underline_color: None, add_modifier: NONE, sub_modifier: NONE }",
+    ),
+    (
+        ",",
+        "Style { fg: Some(Rgb(50, 50, 50)), bg: None, underline_color: None, add_modifier: NONE, sub_modifier: NONE }",
+    ),
+    (
+        " ",
+        "Style { fg: Some(Rgb(50, 50, 50)), bg: None, underline_color: None, add_modifier: NONE, sub_modifier: NONE }",
+    ),
+    (
+        "\"",
+        "Style { fg: Some(Rgb(24, 54, 145)), bg: None, underline_color: None, add_modifier: BOLD, sub_modifier: NONE }",
+    ),
+    (
+        "value",
+        "Style { fg: Some(Rgb(24, 54, 145)), bg: None, underline_color: None, add_modifier: BOLD, sub_modifier: NONE }",
+    ),
+    (
+        "\"",
+        "Style { fg: Some(Rgb(24, 54, 145)), bg: None, underline_color: None, add_modifier: BOLD, sub_modifier: NONE }",
+    ),
+    (
+        ":",
+        "Style { fg: Some(Rgb(50, 50, 50)), bg: None, underline_color: None, add_modifier: NONE, sub_modifier: NONE }",
+    ),
+    (
+        " ",
+        "Style { fg: Some(Rgb(50, 50, 50)), bg: None, underline_color: None, add_modifier: NONE, sub_modifier: NONE }",
+    ),
+    (
+        "42",
+        "Style { fg: Some(Rgb(0, 134, 179)), bg: None, underline_color: None, add_modifier: NONE, sub_modifier: NONE }",
+    ),
+    (
+        ",",
+        "Style { fg: Some(Rgb(50, 50, 50)), bg: None, underline_color: None, add_modifier: NONE, sub_modifier: NONE }",
+    ),
+    (
+        " ",
+        "Style { fg: Some(Rgb(50, 50, 50)), bg: None, underline_color: None, add_modifier: NONE, sub_modifier: NONE }",
+    ),
+    (
+        "\"",
+        "Style { fg: Some(Rgb(24, 54, 145)), bg: None, underline_color: None, add_modifier: BOLD, sub_modifier: NONE }",
+    ),
+    (
+        "enabled",
+        "Style { fg: Some(Rgb(24, 54, 145)), bg: None, underline_color: None, add_modifier: BOLD, sub_modifier: NONE }",
+    ),
+    (
+        "\"",
+        "Style { fg: Some(Rgb(24, 54, 145)), bg: None, underline_color: None, add_modifier: BOLD, sub_modifier: NONE }",
+    ),
+    (
+        ":",
+        "Style { fg: Some(Rgb(50, 50, 50)), bg: None, underline_color: None, add_modifier: NONE, sub_modifier: NONE }",
+    ),
+    (
+        " ",
+        "Style { fg: Some(Rgb(50, 50, 50)), bg: None, underline_color: None, add_modifier: NONE, sub_modifier: NONE }",
+    ),
+    (
+        "true",
+        "Style { fg: Some(Rgb(0, 134, 179)), bg: None, underline_color: None, add_modifier: NONE, sub_modifier: NONE }",
+    ),
+    (
+        "}",
+        "Style { fg: Some(Rgb(50, 50, 50)), bg: None, underline_color: None, add_modifier: NONE, sub_modifier: NONE }",
+    ),
+]

@@ -1,0 +1,22 @@
+---
+source: tests/unit/snapshot_tests.rs
+expression: snapshot
+---
+AppSnapshot {
+    repo_root: "/tmp/test_repo",
+    should_quit: false,
+    context_lines: 3,
+    follow_renames: false,
+    first_parent: false,
+    mode: "History(file: Some(\"test.txt\"), focus: Commits)",
+    commits_count: 0,
+    selected_index: 0,
+    layout_mode: Auto,
+    loading: false,
+    error_message: None,
+    focused_panel: Some(
+        Commits,
+    ),
+    terminal_width: 120,
+    terminal_height: 40,
+}
