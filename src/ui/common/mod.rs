@@ -14,7 +14,7 @@ use ratatui::{
 pub fn draw_status_bar(frame: &mut Frame, app: &App, area: Rect) {
     let focus_hint = match app.get_focused_panel() {
         Some(FocusedPanel::Commits) => "↑↓/jk: select commit | a/s: h-scroll | mouse: scroll/click",
-        Some(FocusedPanel::Diff) => "↑↓/jk: scroll diff | a/s: h-scroll | mouse: scroll",
+        Some(FocusedPanel::Diff) => "↑↓/jk: move cursor | PgUp/PgDn: scroll | a/s: h-scroll",
         None => "Type to search files",
     };
 
@@ -68,7 +68,7 @@ pub fn draw_help_overlay(frame: &mut Frame, _app: &App, area: Rect) {
         ]),
         Line::from(vec![
             Span::styled("↑↓/jk", Style::default().fg(Color::Yellow)),
-            Span::raw("    Navigate commits OR scroll diff"),
+            Span::raw("    Navigate commits OR move cursor in diff"),
         ]),
         Line::from(vec![
             Span::styled("h/l", Style::default().fg(Color::Yellow)),
@@ -76,7 +76,7 @@ pub fn draw_help_overlay(frame: &mut Frame, _app: &App, area: Rect) {
         ]),
         Line::from(vec![
             Span::styled("PgUp/Dn", Style::default().fg(Color::Yellow)),
-            Span::raw("  Scroll diff (always)"),
+            Span::raw("  Scroll diff by page (always)"),
         ]),
         Line::from(vec![
             Span::styled("^U/^D", Style::default().fg(Color::Yellow)),

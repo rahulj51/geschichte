@@ -4,3 +4,4 @@ claude_plan.md
 **/*.DS_Store*
 plans/*
 test_scripts/*
+.claude/

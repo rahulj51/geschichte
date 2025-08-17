@@ -604,6 +604,23 @@ impl App {
             .unwrap_or(0)
     }
     
+    pub fn get_diff_line_count(&self) -> usize {
+        match self.effective_layout() {
+            crate::cli::LayoutMode::SideBySide => {
+                if let Some(ref side_by_side) = self.current_side_by_side_diff {
+                    // Use the maximum of old_lines and new_lines length for side-by-side
+                    side_by_side.old_lines.len().max(side_by_side.new_lines.len())
+                } else {
+                    0
+                }
+            }
+            _ => {
+                // For unified view, count lines in current_diff
+                self.current_diff.lines().count()
+            }
+        }
+    }
+    
     // Delegate to UIState for scroll calculation
     #[allow(dead_code)] // Used in tests
     pub fn get_page_scroll_size(&self) -> usize {

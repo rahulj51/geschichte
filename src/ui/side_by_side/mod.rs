@@ -70,10 +70,9 @@ fn draw_old_file_panel(frame: &mut Frame, app: &App, area: Rect) {
         // Render the old file content using the styled lines from HighlightedDiff
         let lines: Vec<Line> = side_by_side.old_lines
             .iter()
-            .skip(app.ui_state.diff_scroll)
-            .take(area.height.saturating_sub(2) as usize) // Account for borders
-            .map(|line_opt| {
-                match line_opt {
+            .enumerate()
+            .map(|(global_line_index, line_opt)| {
+                let styled_line = match line_opt {
                     Some(line) => {
                         // Use the proper syntax highlighting and styling
                         style_side_by_side_line(line, true, app.get_file_path()) // true = old file
@@ -85,8 +84,17 @@ fn draw_old_file_panel(frame: &mut Frame, app: &App, area: Rect) {
                             Style::default().fg(Color::DarkGray)
                         )])
                     }
+                };
+                
+                // Apply cursor highlighting if this line is selected and panel is focused
+                if global_line_index == app.ui_state.diff_cursor_line && focused {
+                    apply_cursor_highlight(styled_line)
+                } else {
+                    styled_line
                 }
             })
+            .skip(app.ui_state.diff_scroll)
+            .take(area.height.saturating_sub(2) as usize) // Account for borders
             .collect();
         
         let paragraph = Paragraph::new(lines)
@@ -130,10 +138,9 @@ fn draw_new_file_panel(frame: &mut Frame, app: &App, area: Rect) {
         // Render the new file content using the styled lines from HighlightedDiff
         let lines: Vec<Line> = side_by_side.new_lines
             .iter()
-            .skip(app.ui_state.diff_scroll)
-            .take(area.height.saturating_sub(2) as usize) // Account for borders
-            .map(|line_opt| {
-                match line_opt {
+            .enumerate()
+            .map(|(global_line_index, line_opt)| {
+                let styled_line = match line_opt {
                     Some(line) => {
                         // Use the proper syntax highlighting and styling
                         style_side_by_side_line(line, false, app.get_file_path()) // false = new file
@@ -145,8 +152,17 @@ fn draw_new_file_panel(frame: &mut Frame, app: &App, area: Rect) {
                             Style::default().fg(Color::DarkGray)
                         )])
                     }
+                };
+                
+                // Apply cursor highlighting if this line is selected and panel is focused
+                if global_line_index == app.ui_state.diff_cursor_line && focused {
+                    apply_cursor_highlight(styled_line)
+                } else {
+                    styled_line
                 }
             })
+            .skip(app.ui_state.diff_scroll)
+            .take(area.height.saturating_sub(2) as usize) // Account for borders
             .collect();
         
         let paragraph = Paragraph::new(lines)
@@ -264,4 +280,19 @@ fn style_side_by_side_line(line: &DiffLine, is_old_file: bool, file_path: Option
             Line::from(spans)
         }
     }
+}
+
+/// Apply cursor highlighting to a line by adding background color to all spans
+fn apply_cursor_highlight(line: Line<'static>) -> Line<'static> {
+    let highlighted_spans: Vec<Span> = line.spans
+        .into_iter()
+        .map(|span| {
+            let mut style = span.style;
+            // Use a subtle blue background for cursor highlighting
+            style = style.bg(Color::Rgb(60, 80, 120)); // Dark blue background
+            Span::styled(span.content, style)
+        })
+        .collect();
+    
+    Line::from(highlighted_spans)
 }

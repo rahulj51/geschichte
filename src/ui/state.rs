@@ -7,6 +7,7 @@ pub struct UIState {
     pub diff_scroll: usize,
     pub diff_horizontal_scroll: usize,
     pub commit_horizontal_scroll: usize,
+    pub diff_cursor_line: usize,
 }
 
 impl UIState {
@@ -19,6 +20,7 @@ impl UIState {
             diff_scroll: 0,
             diff_horizontal_scroll: 0,
             commit_horizontal_scroll: 0,
+            diff_cursor_line: 0,
         }
     }
 
@@ -38,6 +40,7 @@ impl UIState {
     pub fn reset_diff_scroll(&mut self) {
         self.diff_scroll = 0;
         self.diff_horizontal_scroll = 0;
+        self.diff_cursor_line = 0;
     }
 
     pub fn increase_split_ratio(&mut self) {
@@ -100,6 +103,52 @@ impl UIState {
     pub fn scroll_commit_right(&mut self, max_width: usize) {
         if self.commit_horizontal_scroll + 4 < max_width {
             self.commit_horizontal_scroll += 4;
+        }
+    }
+    
+    // Cursor navigation methods
+    pub fn move_cursor_up(&mut self, layout_mode: &crate::cli::LayoutMode) {
+        if self.diff_cursor_line > 0 {
+            self.diff_cursor_line -= 1;
+            self.ensure_cursor_visible(layout_mode);
+        }
+    }
+    
+    pub fn move_cursor_down(&mut self, max_lines: usize, layout_mode: &crate::cli::LayoutMode) {
+        if max_lines > 0 && self.diff_cursor_line < max_lines - 1 {
+            self.diff_cursor_line += 1;
+            self.ensure_cursor_visible(layout_mode);
+        }
+    }
+    
+    pub fn get_visible_lines(&self, layout_mode: &crate::cli::LayoutMode) -> usize {
+        // Calculate how many lines are visible in the diff area
+        let visible_height = self.terminal_height.saturating_sub(1) as usize; // Account for status bar
+        
+        match layout_mode {
+            crate::cli::LayoutMode::SideBySide => {
+                // In side-by-side mode, diff takes 70% of height, minus borders
+                let diff_height = ((visible_height as f32) * 0.7) as usize;
+                diff_height.saturating_sub(2) // Account for panel borders
+            }
+            _ => {
+                // In unified mode, diff area uses split ratio, minus borders
+                let diff_height = ((visible_height as f32) * (1.0 - self.split_ratio)) as usize;
+                diff_height.saturating_sub(2) // Account for panel borders
+            }
+        }
+    }
+    
+    fn ensure_cursor_visible(&mut self, layout_mode: &crate::cli::LayoutMode) {
+        let visible_lines = self.get_visible_lines(layout_mode);
+        
+        // If cursor is above the current scroll, scroll up
+        if self.diff_cursor_line < self.diff_scroll {
+            self.diff_scroll = self.diff_cursor_line;
+        }
+        // If cursor is below the visible area, scroll down
+        else if self.diff_cursor_line >= self.diff_scroll + visible_lines {
+            self.diff_scroll = self.diff_cursor_line.saturating_sub(visible_lines.saturating_sub(1));
         }
     }
 }

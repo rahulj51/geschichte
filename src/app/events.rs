@@ -9,7 +9,10 @@ impl App {
                 if let Some(focused_panel) = self.get_focused_panel() {
                     match focused_panel {
                         FocusedPanel::Commits => self.move_selection_up()?,
-                        FocusedPanel::Diff => self.ui_state.scroll_diff_up(),
+                        FocusedPanel::Diff => {
+                            let layout_mode = self.effective_layout();
+                            self.ui_state.move_cursor_up(&layout_mode);
+                        }
                     }
                 }
                 Ok(true)
@@ -18,7 +21,11 @@ impl App {
                 if let Some(focused_panel) = self.get_focused_panel() {
                     match focused_panel {
                         FocusedPanel::Commits => self.move_selection_down()?,
-                        FocusedPanel::Diff => self.ui_state.scroll_diff_down(),
+                        FocusedPanel::Diff => {
+                            let max_lines = self.get_diff_line_count();
+                            let layout_mode = self.effective_layout();
+                            self.ui_state.move_cursor_down(max_lines, &layout_mode);
+                        }
                     }
                 }
                 Ok(true)

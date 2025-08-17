@@ -8,7 +8,7 @@ use crate::ui::common::{
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
-    text::Line,
+    text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
     Frame,
 };
@@ -74,9 +74,18 @@ fn draw_diff_panel(frame: &mut Frame, app: &App, area: Rect) {
     let highlighted_diff = HighlightedDiff::new(&app.current_diff, file_path);
     let all_styled_lines = highlighted_diff.to_styled_lines();
     
-    // Apply both vertical AND horizontal scrolling
+    // Apply both vertical AND horizontal scrolling with cursor highlighting
     let styled_lines: Vec<Line> = all_styled_lines
         .into_iter()
+        .enumerate()
+        .map(|(global_line_index, line)| {
+            if global_line_index == app.ui_state.diff_cursor_line && focused {
+                // Apply cursor highlighting - add background color to all spans
+                apply_cursor_highlight(line)
+            } else {
+                line
+            }
+        })
         .skip(app.ui_state.diff_scroll) // Vertical scroll
         .take(area.height.saturating_sub(2) as usize) // Account for borders
         .map(|line| apply_horizontal_scroll(line, app.ui_state.diff_horizontal_scroll, area.width as usize))
@@ -84,4 +93,19 @@ fn draw_diff_panel(frame: &mut Frame, app: &App, area: Rect) {
 
     let paragraph = Paragraph::new(styled_lines).block(block);
     frame.render_widget(paragraph, area);
+}
+
+/// Apply cursor highlighting to a line by adding background color to all spans
+fn apply_cursor_highlight(line: Line<'static>) -> Line<'static> {
+    let highlighted_spans: Vec<Span> = line.spans
+        .into_iter()
+        .map(|span| {
+            let mut style = span.style;
+            // Use a subtle blue background for cursor highlighting
+            style = style.bg(Color::Rgb(60, 80, 120)); // Dark blue background
+            Span::styled(span.content, style)
+        })
+        .collect();
+    
+    Line::from(highlighted_spans)
 }
