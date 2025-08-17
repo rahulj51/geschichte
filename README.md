@@ -36,6 +36,14 @@ I wrote this because I was badly missing this feature in 'Zed', my primary IDE. 
 - **Split-pane interface** with resizable panels and help overlay
 - **Side-by-side diff view** - Three-panel layout with old/new file comparison
 
+### Enhanced Commit Information
+- **Detailed commit popups** - View comprehensive commit metadata with scrollable interface
+- **Copy functionality** - Copy commit SHA, message, author, date, or GitHub URLs to clipboard
+- **Enhanced commit metadata** - Author/committer details, timestamps, refs, and PR information
+- **Pull request detection** - Automatic detection and display of GitHub PR information from commit messages
+- **Branch and tag refs** - See which branches and tags contain each commit
+- **Commit statistics** - View files changed, insertions, and deletions for each commit
+
 ### User Experience
 - **Seamless file switching** - Switch between files without losing context using 'f' key
 - **Mac-friendly navigation** - Multiple scroll options (PageUp/Down, Ctrl+D/U, Ctrl+F/B)
@@ -144,6 +152,26 @@ geschichte -s -L 5 --first-parent src/main.rs
 | `f` | Open file picker to switch to another file |
 | `d` | Mark/diff between commits - select two commits to compare |
 
+### Commit Information & Copy
+| Key | Action |
+|-----|--------|
+| `i` / `Enter` | Show detailed commit information popup |
+| `y` | Start copy mode - then press target key |
+| `yy` | Copy full commit SHA (vim-style) |
+| `Y` | Copy short commit SHA |
+| `c` | Copy full commit SHA (in popup) |
+
+### Copy Mode Targets (after pressing `y`)
+| Key | Action |
+|-----|--------|
+| `s` | Copy full SHA |
+| `h` | Copy short SHA |
+| `m` | Copy commit message (subject + body) |
+| `a` | Copy author name and email |
+| `d` | Copy commit date |
+| `u` | Copy GitHub/GitLab URL |
+| `y` | Copy full SHA (same as `s`) |
+
 ### File Picker (when open)
 | Key | Action |
 |-----|--------|
@@ -231,11 +259,70 @@ Geschichte allows you to compare any two commits to see exactly what changed bet
 
 The range diff works across any two commits - compare your working directory with any historical commit, or see what changed between two releases!
 
+## Detailed Commit Information
+
+Geschichte provides comprehensive commit metadata through an interactive popup that shows everything you need to know about a commit.
+
+### How to Access
+
+- **From commit list**: Press `i` or `Enter` on any commit
+- **Navigation**: Use `↑↓` or `j/k` to scroll through the popup content
+- **Copy shortcuts**: Press `c` to copy the commit SHA directly from the popup
+- **Close**: Press `q` or `Esc` to close the popup
+
+### What's Included
+
+**Basic Information**:
+- Full commit SHA (clickable/copyable)
+- Author name and email
+- Commit date and time
+- Subject line
+
+**Extended Metadata** (when available):
+- Committer information (if different from author)
+- Commit timestamp (if different from author date)
+- Branch and tag references
+- Pull request information (auto-detected from commit messages)
+- Commit statistics (files changed, insertions, deletions)
+
+**Full Message Content**:
+- Complete commit message body
+- Scrollable interface for long messages
+- Preserves original formatting
+
+### Copy Integration
+
+The commit popup integrates seamlessly with the copy system - you can copy any commit information directly from the detailed view without leaving the popup.
+
+### Example Popup Content
+
+```
+┌─ Commit Details ──────────────────────────────────┐
+│ Hash:      abc123def456789abcdef123456789abcdef12 │
+│ Author:    Jane Developer <jane@company.com>      │
+│ Date:      2023-08-15 14:30:22                    │
+│ Refs:      (branch:main, tag:v1.2.0)             │
+│ PR:        #142 - Add authentication system       │
+│ Stats:     5 files, +120 -30 lines               │
+│                                                   │
+│ ┌─ Full Message ─────────────────────────────────┐ │
+│ │ Implement user authentication system           │ │
+│ │                                                │ │
+│ │ Added JWT token support and password hashing.  │ │
+│ │                                                │ │
+│ │ This commit includes:                          │ │
+│ │ - JWT token generation                         │ │
+│ │ │ - Password validation                          │ │
+│ │ │ - Session management                           │ │
+│ │ └─────────────────────────────────────────────────┘ │
+│ [↑↓/jk] Scroll  [c] Copy hash  [Esc/q] Close         │
+└────────────────────────────────────────────────────────┘
+```
+
 ### Coming Soon
 | Key | Action |
 |-----|--------|
 | `/` | Search in diff |
-| `c` | Copy commit hash |
 | `m` | Cycle merge parents |
 
 ## Interface
@@ -294,17 +381,23 @@ The range diff works across any two commits - compare your working directory wit
 
 ## 🛣Roadmap
 
+### Recently Completed ✅
+- **Copy commit hash** - Quick clipboard integration with multiple formats
+- **Detailed commit information** - Comprehensive metadata popups
+- **Enhanced commit metadata** - Author/committer details, refs, PR detection
+- **Commit statistics** - Files changed, insertions, deletions display
+
 ### Upcoming Features
 - **In-diff search** - Search within diff content with regex support
 - **Merge parent cycling** - Navigate through merge commit parents
-- **Copy commit hash** - Quick clipboard integration
+- **Enhanced copy options** - More format options and integrations
 
 ### Future Enhancements
 - **Performance optimizations** - Handle massive repositories efficiently
-- **Side-by-side diff view** - Alternative layout option
 - **Enhanced syntax highlighting** - More language support and themes
 - **Configuration files** - Customizable themes and keybindings
 - **Blame view** - See who changed each line and when
+- **Commit editing workflows** - Interactive rebase, cherry-pick support
 
 ## Contributing
 
@@ -339,6 +432,7 @@ Built with these excellent Rust crates:
 - [crossterm](https://github.com/crossterm-rs/crossterm) - Cross-platform terminal manipulation
 - [clap](https://github.com/clap-rs/clap) - Command line parsing
 - [anyhow](https://github.com/dtolnay/anyhow) - Error handling
+- [arboard](https://github.com/1Password/arboard) - Cross-platform clipboard access
 
 ## License
 
