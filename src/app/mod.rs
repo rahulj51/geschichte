@@ -3,6 +3,7 @@ pub mod events;
 use crate::cache::DiffCache;
 use crate::cli::LayoutMode;
 use crate::commit::Commit;
+use crate::copy::{CommitCopier, CopyFormat, CopyMode};
 use crate::diff::side_by_side::SideBySideDiff;
 use crate::error::Result;
 use crate::ui::file_picker::FilePickerState;
@@ -64,6 +65,18 @@ pub struct App {
     // Diff range selection
     pub diff_range_start: Option<usize>,
     pub current_diff_range: Option<(usize, usize)>, // (older_index, newer_index)
+    
+    // Copy functionality
+    pub copy_mode: Option<CopyMode>,
+    pub copier: CommitCopier,
+    pub copy_message: Option<String>,
+    
+    // Commit info popup
+    pub show_commit_info: bool,
+    pub commit_info_popup: Option<crate::ui::commit_info::CommitInfoPopup>,
+    
+    // Message timing
+    pub message_timer: Option<std::time::Instant>,
 }
 
 impl App {
@@ -116,6 +129,12 @@ impl App {
             error_message: None,
             diff_range_start: None,
             current_diff_range: None,
+            copy_mode: None,
+            copier: CommitCopier::new(),
+            copy_message: None,
+            show_commit_info: false,
+            commit_info_popup: None,
+            message_timer: None,
         })
     }
 
@@ -149,6 +168,12 @@ impl App {
             error_message: None,
             diff_range_start: None,
             current_diff_range: None,
+            copy_mode: None,
+            copier: CommitCopier::new(),
+            copy_message: None,
+            show_commit_info: false,
+            commit_info_popup: None,
+            message_timer: None,
         }
     }
 
@@ -498,6 +523,9 @@ impl App {
         if self.handle_scrolling_keys(key)? {
             return Ok(());
         }
+        if self.handle_copy_keys(key)? {
+            return Ok(());
+        }
         if self.handle_ui_keys(key)? {
             return Ok(());
         }
@@ -625,5 +653,216 @@ impl App {
     #[allow(dead_code)] // Used in tests
     pub fn get_page_scroll_size(&self) -> usize {
         self.ui_state.get_page_scroll_size()
+    }
+    
+    // Copy functionality methods
+    pub fn copy_commit_sha(&mut self, short: bool) -> Result<()> {
+        if self.commits.is_empty() || self.selected_index >= self.commits.len() {
+            return Ok(());
+        }
+
+        let commit = &self.commits[self.selected_index];
+        let format = if short { CopyFormat::ShortSha } else { CopyFormat::FullSha };
+        
+        match self.copier.copy_commit_info(commit, format) {
+            Ok(content) => {
+                self.copy_message = Some(format!("Copied: {}", content));
+                self.copy_mode = None;
+                self.start_message_timer();
+            }
+            Err(err) => {
+                self.error_message = Some(err);
+                self.start_message_timer();
+            }
+        }
+        
+        Ok(())
+    }
+    
+    pub fn copy_commit_message(&mut self) -> Result<()> {
+        if self.commits.is_empty() || self.selected_index >= self.commits.len() {
+            return Ok(());
+        }
+
+        let commit = &self.commits[self.selected_index];
+        
+        match self.copier.copy_commit_info(commit, CopyFormat::Message) {
+            Ok(_) => {
+                self.copy_message = Some("Copied commit message".to_string());
+                self.copy_mode = None;
+                self.start_message_timer();
+            }
+            Err(err) => {
+                self.error_message = Some(err);
+                self.start_message_timer();
+            }
+        }
+        
+        Ok(())
+    }
+    
+    pub fn copy_commit_author(&mut self) -> Result<()> {
+        if self.commits.is_empty() || self.selected_index >= self.commits.len() {
+            return Ok(());
+        }
+
+        let commit = &self.commits[self.selected_index];
+        
+        match self.copier.copy_commit_info(commit, CopyFormat::Author) {
+            Ok(content) => {
+                self.copy_message = Some(format!("Copied author: {}", content));
+                self.copy_mode = None;
+                self.start_message_timer();
+            }
+            Err(err) => {
+                self.error_message = Some(err);
+                self.start_message_timer();
+            }
+        }
+        
+        Ok(())
+    }
+    
+    pub fn copy_commit_date(&mut self) -> Result<()> {
+        if self.commits.is_empty() || self.selected_index >= self.commits.len() {
+            return Ok(());
+        }
+
+        let commit = &self.commits[self.selected_index];
+        
+        match self.copier.copy_commit_info(commit, CopyFormat::Date) {
+            Ok(content) => {
+                self.copy_message = Some(format!("Copied date: {}", content));
+                self.copy_mode = None;
+                self.start_message_timer();
+            }
+            Err(err) => {
+                self.error_message = Some(err);
+                self.start_message_timer();
+            }
+        }
+        
+        Ok(())
+    }
+    
+    pub fn copy_github_url(&mut self) -> Result<()> {
+        if self.commits.is_empty() || self.selected_index >= self.commits.len() {
+            return Ok(());
+        }
+
+        let commit = &self.commits[self.selected_index];
+        
+        match self.copier.copy_commit_info(commit, CopyFormat::GitHubUrl) {
+            Ok(content) => {
+                self.copy_message = Some(format!("Copied URL: {}", content));
+                self.copy_mode = None;
+                self.start_message_timer();
+            }
+            Err(err) => {
+                self.error_message = Some(err);
+                self.start_message_timer();
+            }
+        }
+        
+        Ok(())
+    }
+    
+    pub fn start_copy_mode(&mut self) {
+        self.copy_mode = Some(CopyMode::WaitingForTarget);
+        self.copy_message = Some("Copy mode: s=SHA, h=short, m=msg, a=author, d=date, u=URL, y=SHA".to_string());
+    }
+    
+    pub fn cancel_copy_mode(&mut self) {
+        self.copy_mode = None;
+        self.copy_message = None;
+    }
+    
+    #[allow(dead_code)]
+    pub fn clear_copy_message(&mut self) {
+        self.copy_message = None;
+        self.message_timer = None;
+    }
+
+    pub fn start_message_timer(&mut self) {
+        self.message_timer = Some(std::time::Instant::now());
+    }
+    
+    pub fn check_message_timeout(&mut self) {
+        if let Some(timer) = self.message_timer {
+            if timer.elapsed().as_secs() >= 3 {
+                self.copy_message = None;
+                self.error_message = None;
+                self.message_timer = None;
+            }
+        }
+    }
+    
+    // Commit info popup methods
+    pub fn show_commit_info_popup(&mut self) -> Result<()> {
+        if self.commits.is_empty() || self.selected_index >= self.commits.len() {
+            return Ok(());
+        }
+
+        let selected_index = self.selected_index;
+        
+        // Load additional commit metadata if not already loaded
+        self.load_enhanced_commit_data_by_index(selected_index)?;
+        
+        let enhanced_commit = self.commits[selected_index].clone();
+        self.commit_info_popup = Some(crate::ui::commit_info::CommitInfoPopup::new(enhanced_commit));
+        self.show_commit_info = true;
+        
+        Ok(())
+    }
+    
+    pub fn hide_commit_info_popup(&mut self) {
+        self.show_commit_info = false;
+        self.commit_info_popup = None;
+    }
+    
+    pub fn scroll_commit_info_up(&mut self) {
+        if let Some(ref mut popup) = self.commit_info_popup {
+            popup.scroll_up();
+        }
+    }
+    
+    pub fn scroll_commit_info_down(&mut self) {
+        if let Some(ref mut popup) = self.commit_info_popup {
+            let total_lines = popup.get_total_lines();
+            let viewport_height = 10; // Approximate viewport height
+            popup.scroll_down(total_lines, viewport_height);
+        }
+    }
+    
+    fn load_enhanced_commit_data_by_index(&mut self, index: usize) -> Result<()> {
+        if index >= self.commits.len() {
+            return Ok(());
+        }
+
+        let commit = &mut self.commits[index];
+        if commit.is_working_directory {
+            return Ok(());
+        }
+
+        // Load refs if not already loaded
+        if commit.refs.is_empty() {
+            if let Ok(refs) = crate::git::history::fetch_commit_refs(&self.repo_root, &commit.hash) {
+                commit.refs = refs;
+            }
+        }
+
+        // Load PR info if not already loaded
+        if commit.pr_info.is_none() {
+            commit.pr_info = crate::git::history::detect_pr_info(commit);
+        }
+
+        // Load stats if not already loaded
+        if commit.stats.is_none() {
+            if let Ok(stats) = crate::git::history::fetch_commit_stats(&self.repo_root, &commit.hash) {
+                commit.stats = stats;
+            }
+        }
+
+        Ok(())
     }
 }

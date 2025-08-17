@@ -12,8 +12,39 @@ use ratatui::{
 
 /// Draw the status bar at the bottom of the screen
 pub fn draw_status_bar(frame: &mut Frame, app: &App, area: Rect) {
+    // Check for priority messages (error, copy message, copy mode)
+    if let Some(ref error_msg) = app.error_message {
+        let error_bar = Paragraph::new(Line::from(vec![Span::styled(
+            format!(" ERROR: {}", error_msg),
+            Style::default().fg(Color::White).bg(Color::Red),
+        )]));
+        frame.render_widget(error_bar, area);
+        return;
+    }
+
+    if let Some(ref copy_msg) = app.copy_message {
+        let copy_bar = Paragraph::new(Line::from(vec![Span::styled(
+            format!(" {}", copy_msg),
+            Style::default().fg(Color::Black).bg(Color::Green),
+        )]));
+        frame.render_widget(copy_bar, area);
+        return;
+    }
+
+    if app.copy_mode.is_some() {
+        let default_message = "Copy mode: s=SHA, h=short, m=msg, a=author, d=date, u=URL, y=SHA".to_string();
+        let message = app.copy_message.as_ref().unwrap_or(&default_message);
+        let copy_mode_bar = Paragraph::new(Line::from(vec![Span::styled(
+            format!(" {}", message),
+            Style::default().fg(Color::Black).bg(Color::Yellow),
+        )]));
+        frame.render_widget(copy_mode_bar, area);
+        return;
+    }
+
+    // Normal status display
     let focus_hint = match app.get_focused_panel() {
-        Some(FocusedPanel::Commits) => "↑↓/jk: select commit | a/s: h-scroll | mouse: scroll/click",
+        Some(FocusedPanel::Commits) => "↑↓/jk: select | i/Enter: info | y: copy | d: diff | a/s: h-scroll",
         Some(FocusedPanel::Diff) => "↑↓/jk: move cursor | PgUp/PgDn: scroll | a/s: h-scroll",
         None => "Type to search files",
     };
@@ -100,16 +131,20 @@ pub fn draw_help_overlay(frame: &mut Frame, _app: &App, area: Rect) {
             Span::raw("        Switch to another file"),
         ]),
         Line::from(vec![
-            Span::styled("/", Style::default().fg(Color::Green)),
-            Span::raw("        Search in diff (TODO)"),
+            Span::styled("i/Enter", Style::default().fg(Color::Green)),
+            Span::raw("   Show detailed commit info"),
         ]),
         Line::from(vec![
-            Span::styled("c", Style::default().fg(Color::Green)),
-            Span::raw("        Copy commit hash (TODO)"),
+            Span::styled("y", Style::default().fg(Color::Green)),
+            Span::raw("        Copy mode (yy=full SHA, Y=short SHA)"),
         ]),
         Line::from(vec![
             Span::styled("d", Style::default().fg(Color::Green)),
             Span::raw("        Mark/diff between commits"),
+        ]),
+        Line::from(vec![
+            Span::styled("/", Style::default().fg(Color::Green)),
+            Span::raw("        Search in diff (TODO)"),
         ]),
         Line::from(""),
         Line::from(vec![

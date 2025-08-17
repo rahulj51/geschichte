@@ -40,6 +40,7 @@ chrono = "0.4"
 regex = "1.10"
 lru = "0.12"
 fuzzy-matcher = "0.3"
+arboard = "3.4"
 
 # Syntax highlighting
 syntect = "5.2"

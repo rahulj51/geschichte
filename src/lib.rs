@@ -2,6 +2,7 @@ pub mod app;
 pub mod cache;
 pub mod cli;
 pub mod commit;
+pub mod copy;
 pub mod diff;
 pub mod error;
 pub mod git;

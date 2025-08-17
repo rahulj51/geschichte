@@ -6,7 +6,9 @@ impl App {
     pub fn handle_navigation_keys(&mut self, key: KeyEvent) -> Result<bool> {
         match (key.code, key.modifiers) {
             (KeyCode::Up, KeyModifiers::NONE) | (KeyCode::Char('k'), KeyModifiers::NONE) => {
-                if let Some(focused_panel) = self.get_focused_panel() {
+                if self.show_commit_info {
+                    self.scroll_commit_info_up();
+                } else if let Some(focused_panel) = self.get_focused_panel() {
                     match focused_panel {
                         FocusedPanel::Commits => self.move_selection_up()?,
                         FocusedPanel::Diff => {
@@ -18,7 +20,9 @@ impl App {
                 Ok(true)
             }
             (KeyCode::Down, KeyModifiers::NONE) | (KeyCode::Char('j'), KeyModifiers::NONE) => {
-                if let Some(focused_panel) = self.get_focused_panel() {
+                if self.show_commit_info {
+                    self.scroll_commit_info_down();
+                } else if let Some(focused_panel) = self.get_focused_panel() {
                     match focused_panel {
                         FocusedPanel::Commits => self.move_selection_down()?,
                         FocusedPanel::Diff => {
@@ -72,8 +76,12 @@ impl App {
                 self.ui_state.scroll_diff_page_down();
                 Ok(true)
             }
-            // Horizontal scrolling
+            // Horizontal scrolling (but not when in copy mode)
             (KeyCode::Char('a'), KeyModifiers::NONE) => {
+                // Don't handle 'a' for scrolling when in copy mode
+                if self.copy_mode.is_some() {
+                    return Ok(false); // Let copy handler deal with it
+                }
                 if let Some(focused_panel) = self.get_focused_panel() {
                     match focused_panel {
                         FocusedPanel::Commits => self.ui_state.scroll_commit_left(),
@@ -83,6 +91,10 @@ impl App {
                 Ok(true)
             }
             (KeyCode::Char('s'), KeyModifiers::NONE) => {
+                // Don't handle 's' for scrolling when in copy mode
+                if self.copy_mode.is_some() {
+                    return Ok(false); // Let copy handler deal with it
+                }
                 if let Some(focused_panel) = self.get_focused_panel() {
                     match focused_panel {
                         FocusedPanel::Commits => {
@@ -104,12 +116,20 @@ impl App {
     pub fn handle_ui_keys(&mut self, key: KeyEvent) -> Result<bool> {
         match (key.code, key.modifiers) {
             (KeyCode::Char('q'), KeyModifiers::NONE) => {
-                self.quit();
+                if self.show_commit_info {
+                    self.hide_commit_info_popup();
+                } else {
+                    self.quit();
+                }
                 Ok(true)
             }
             (KeyCode::Esc, _) => {
                 if self.ui_state.show_help {
                     self.ui_state.show_help = false;
+                } else if self.show_commit_info {
+                    self.hide_commit_info_popup();
+                } else if self.copy_mode.is_some() {
+                    self.cancel_copy_mode();
                 } else if self.diff_range_start.is_some() {
                     self.clear_diff_range_selection();
                 } else {
@@ -144,7 +164,87 @@ impl App {
                 self.ui_state.toggle_help();
                 Ok(true)
             }
+            (KeyCode::Char('i'), KeyModifiers::NONE) | (KeyCode::Enter, KeyModifiers::NONE) => {
+                // Show commit info popup (only in commits panel)
+                if matches!(self.get_focused_panel(), Some(FocusedPanel::Commits)) {
+                    self.show_commit_info_popup()?;
+                }
+                Ok(true)
+            }
             _ => Ok(false)
+        }
+    }
+
+    pub fn handle_copy_keys(&mut self, key: KeyEvent) -> Result<bool> {
+        // Handle copy keys in commits panel and history mode, or in commit info popup
+        if !matches!(self.get_focused_panel(), Some(FocusedPanel::Commits)) && !self.show_commit_info {
+            return Ok(false);
+        }
+
+        match (key.code, key.modifiers) {
+            (KeyCode::Char('y'), KeyModifiers::NONE) => {
+                match self.copy_mode.as_ref() {
+                    None => {
+                        // First 'y' press - start copy mode
+                        self.start_copy_mode();
+                    }
+                    Some(crate::copy::CopyMode::WaitingForTarget) => {
+                        // Second 'y' press - copy full SHA
+                        self.copy_commit_sha(false)?;
+                    }
+                }
+                Ok(true)
+            }
+            (KeyCode::Char('Y'), KeyModifiers::SHIFT) => {
+                // Capital Y - copy short SHA directly
+                self.copy_commit_sha(true)?;
+                Ok(true)
+            }
+            (KeyCode::Char('c'), KeyModifiers::NONE) => {
+                // Direct copy of full SHA (especially useful in popup)
+                if self.show_commit_info {
+                    self.copy_commit_sha(false)?;
+                } else {
+                    // Start copy mode in normal view
+                    self.start_copy_mode();
+                }
+                Ok(true)
+            }
+            // Note: 'm' key is only handled in copy mode section below
+            _ => {
+                // Handle copy mode targets
+                if matches!(self.copy_mode, Some(crate::copy::CopyMode::WaitingForTarget)) {
+                    match (key.code, key.modifiers) {
+                        (KeyCode::Char('s'), KeyModifiers::NONE) => {
+                            self.copy_commit_sha(false)?;
+                            Ok(true)
+                        }
+                        (KeyCode::Char('h'), KeyModifiers::NONE) => {
+                            self.copy_commit_sha(true)?;
+                            Ok(true)
+                        }
+                        (KeyCode::Char('m'), KeyModifiers::NONE) => {
+                            self.copy_commit_message()?;
+                            Ok(true)
+                        }
+                        (KeyCode::Char('a'), KeyModifiers::NONE) => {
+                            self.copy_commit_author()?;
+                            Ok(true)
+                        }
+                        (KeyCode::Char('d'), KeyModifiers::NONE) => {
+                            self.copy_commit_date()?;
+                            Ok(true)
+                        }
+                        (KeyCode::Char('u'), KeyModifiers::NONE) => {
+                            self.copy_github_url()?;
+                            Ok(true)
+                        }
+                        _ => Ok(false)
+                    }
+                } else {
+                    Ok(false)
+                }
+            }
         }
     }
 }

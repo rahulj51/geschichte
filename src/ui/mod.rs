@@ -1,5 +1,6 @@
 pub mod file_picker;
 pub mod state;
+pub mod commit_info;
 mod unified;
 mod side_by_side;
 mod common;
@@ -24,6 +25,13 @@ pub fn draw(frame: &mut Frame, app: &App) {
     // Draw help overlay on top if shown
     if app.ui_state.show_help {
         draw_help_overlay(frame, app, frame.area());
+    }
+    
+    // Draw commit info popup on top if shown
+    if app.show_commit_info {
+        if let Some(ref popup) = app.commit_info_popup {
+            popup.render(frame, frame.area());
+        }
     }
 }
 

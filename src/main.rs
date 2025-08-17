@@ -2,6 +2,7 @@ mod app;
 mod cache;
 mod cli;
 mod commit;
+mod copy;
 mod diff;
 mod error;
 mod git;
@@ -147,6 +148,9 @@ fn run_ui(terminal: &mut terminal::AppTerminal, app: &mut app::App) -> Result<()
                 _ => {}
             }
         }
+
+        // Check for message timeout
+        app.check_message_timeout();
 
         // Check if we should quit
         if app.should_quit {
