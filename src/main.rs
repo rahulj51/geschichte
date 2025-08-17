@@ -69,7 +69,7 @@ fn run(args: cli::Args) -> Result<()> {
         };
 
         // Verify file exists in git
-        let relative_path = git::verify_file_in_repo(&repo_root, &file_path)?;
+        let relative_path = git::files::verify_file_in_repo(&repo_root, &file_path)?;
         log::debug!("Viewing history for: {}", relative_path.display());
 
         let mut app = app::App::new_history(
@@ -165,8 +165,8 @@ enum PanelType {
 
 fn get_panel_at_position(app: &app::App, col: u16, _row: u16) -> Option<PanelType> {
     // Calculate panel boundaries based on split ratio and actual terminal width
-    let split_ratio = app.split_ratio;
-    let terminal_width = app.terminal_width;
+    let split_ratio = app.ui_state.split_ratio;
+    let terminal_width = app.ui_state.terminal_width;
     let split_point = (terminal_width as f32 * split_ratio) as u16;
     
     if col < split_point {
@@ -206,7 +206,7 @@ fn handle_mouse_event(app: &mut app::App, mouse_event: MouseEvent) -> Result<()>
         MouseEventKind::ScrollUp => {
             match get_panel_at_position(app, mouse_event.column, mouse_event.row) {
                 Some(PanelType::Diff) => {
-                    app.scroll_diff_up();
+                    app.ui_state.scroll_diff_up();
                 }
                 Some(PanelType::Commits) => {
                     if app.selected_index > 0 {
@@ -219,7 +219,7 @@ fn handle_mouse_event(app: &mut app::App, mouse_event: MouseEvent) -> Result<()>
         MouseEventKind::ScrollDown => {
             match get_panel_at_position(app, mouse_event.column, mouse_event.row) {
                 Some(PanelType::Diff) => {
-                    app.scroll_diff_down();
+                    app.ui_state.scroll_diff_down();
                 }
                 Some(PanelType::Commits) => {
                     if app.selected_index + 1 < app.commits.len() {
@@ -233,10 +233,10 @@ fn handle_mouse_event(app: &mut app::App, mouse_event: MouseEvent) -> Result<()>
             // Horizontal scrolling (if terminal supports it)
             match get_panel_at_position(app, mouse_event.column, mouse_event.row) {
                 Some(PanelType::Diff) => {
-                    app.scroll_diff_left();
+                    app.ui_state.scroll_diff_left();
                 }
                 Some(PanelType::Commits) => {
-                    app.scroll_commit_left();
+                    app.ui_state.scroll_commit_left();
                 }
                 None => {}
             }
@@ -246,11 +246,11 @@ fn handle_mouse_event(app: &mut app::App, mouse_event: MouseEvent) -> Result<()>
             match get_panel_at_position(app, mouse_event.column, mouse_event.row) {
                 Some(PanelType::Diff) => {
                     let max_width = app.calculate_max_diff_line_width();
-                    app.scroll_diff_right(max_width);
+                    app.ui_state.scroll_diff_right(max_width);
                 }
                 Some(PanelType::Commits) => {
                     let max_width = app.calculate_max_commit_line_width();
-                    app.scroll_commit_right(max_width);
+                    app.ui_state.scroll_commit_right(max_width);
                 }
                 None => {}
             }

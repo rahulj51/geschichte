@@ -22,6 +22,14 @@ pub enum GeschichteError {
     #[error("Terminal error: {0}")]
     TerminalError(String),
 
+    #[error("UI rendering error: {0}")]
+    #[allow(dead_code)] // Available for future use
+    UIError(String),
+
+    #[error("State management error: {0}")]
+    #[allow(dead_code)] // Available for future use
+    StateError(String),
+
     #[error("Configuration error: {0}")]
     #[allow(dead_code)]
     ConfigError(String),

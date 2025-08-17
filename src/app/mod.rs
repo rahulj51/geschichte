@@ -1,9 +1,12 @@
+pub mod events;
+
 use crate::cache::DiffCache;
 use crate::cli::LayoutMode;
 use crate::commit::Commit;
 use crate::diff::side_by_side::SideBySideDiff;
 use crate::error::Result;
 use crate::ui::file_picker::FilePickerState;
+use crate::ui::state::UIState;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -48,19 +51,15 @@ pub struct App {
     pub rename_map: HashMap<String, PathBuf>,
     pub current_diff: String,
     pub current_side_by_side_diff: Option<SideBySideDiff>,
-    pub diff_scroll: usize,
-    pub diff_horizontal_scroll: usize,
-    pub commit_horizontal_scroll: usize,
     pub diff_cache: DiffCache,
     
-    // UI state
+    // UI state (moved to separate struct)
+    pub ui_state: UIState,
+    
+    // Core app state
     pub layout_mode: LayoutMode,
-    pub split_ratio: f32,
-    pub show_help: bool,
     pub loading: bool,
     pub error_message: Option<String>,
-    pub terminal_height: u16,
-    pub terminal_width: u16,
     
     // Diff range selection
     pub diff_range_start: Option<usize>,
@@ -73,7 +72,7 @@ impl App {
         match self.layout_mode {
             LayoutMode::Auto => {
                 // Use side-by-side if terminal is wide enough (120+ columns)
-                if self.terminal_width >= 120 {
+                if self.ui_state.terminal_width >= 120 {
                     LayoutMode::SideBySide
                 } else {
                     LayoutMode::Unified
@@ -82,6 +81,7 @@ impl App {
             other => other,
         }
     }
+
     pub fn new_file_picker(
         repo_root: PathBuf,
         context_lines: u32,
@@ -109,17 +109,11 @@ impl App {
             rename_map: HashMap::new(),
             current_diff: String::new(),
             current_side_by_side_diff: None,
-            diff_scroll: 0,
-            diff_horizontal_scroll: 0,
-            commit_horizontal_scroll: 0,
             diff_cache: DiffCache::new(50),
+            ui_state: UIState::new(),
             layout_mode,
-            split_ratio: 0.4,
-            show_help: false,
             loading: false,
             error_message: None,
-            terminal_height: 24,
-            terminal_width: 80,
             diff_range_start: None,
             current_diff_range: None,
         })
@@ -148,17 +142,11 @@ impl App {
             rename_map: HashMap::new(),
             current_diff: String::new(),
             current_side_by_side_diff: None,
-            diff_scroll: 0,
-            diff_horizontal_scroll: 0,
-            commit_horizontal_scroll: 0,
             diff_cache: DiffCache::new(50),
+            ui_state: UIState::new(),
             layout_mode,
-            split_ratio: 0.4, // 40% commits, 60% diff
-            show_help: false,
             loading: false,
             error_message: None,
-            terminal_height: 24,
-            terminal_width: 80,
             diff_range_start: None,
             current_diff_range: None,
         }
@@ -176,9 +164,7 @@ impl App {
         self.rename_map.clear();
         self.current_diff.clear();
         self.current_side_by_side_diff = None;
-        self.diff_scroll = 0;
-        self.diff_horizontal_scroll = 0;
-        self.commit_horizontal_scroll = 0;
+        self.ui_state.reset_diff_scroll();
         self.diff_cache.clear();
         
         // Load git data for the new file
@@ -344,6 +330,10 @@ impl App {
         }
     }
 
+    fn reset_diff_scroll(&mut self) {
+        self.ui_state.reset_diff_scroll();
+    }
+
     pub fn quit(&mut self) {
         self.should_quit = true;
     }
@@ -372,84 +362,15 @@ impl App {
         Ok(())
     }
 
-    pub fn scroll_diff_up(&mut self) {
-        if self.diff_scroll > 0 {
-            self.diff_scroll -= 1;
-        }
-    }
-
-    pub fn scroll_diff_down(&mut self) {
-        self.diff_scroll += 1;
-    }
-
-    pub fn scroll_diff_page_up(&mut self) {
-        let page_size = self.get_page_scroll_size();
-        self.diff_scroll = self.diff_scroll.saturating_sub(page_size);
-    }
-
-    pub fn scroll_diff_page_down(&mut self) {
-        let page_size = self.get_page_scroll_size();
-        self.diff_scroll += page_size;
-    }
-
-    pub fn get_page_scroll_size(&self) -> usize {
-        // Calculate scroll size based on visible diff area
-        // Accounting for borders (2 lines) and status bar (1 line)
-        let visible_height = self.terminal_height.saturating_sub(3) as usize;
-        // Use 60% of the visible area for diff (based on split_ratio)
-        let diff_height = ((visible_height as f32) * (1.0 - self.split_ratio)) as usize;
-        // Scroll by half a page for better readability
-        diff_height.saturating_sub(2) / 2
-    }
-
-    // Horizontal scrolling methods
-    pub fn scroll_diff_left(&mut self) {
-        self.diff_horizontal_scroll = self.diff_horizontal_scroll.saturating_sub(4);
-    }
-    
-    pub fn scroll_diff_right(&mut self, max_width: usize) {
-        if self.diff_horizontal_scroll + 4 < max_width {
-            self.diff_horizontal_scroll += 4;
-        }
-    }
-    
-    pub fn scroll_commit_left(&mut self) {
-        self.commit_horizontal_scroll = self.commit_horizontal_scroll.saturating_sub(4);
-    }
-    
-    pub fn scroll_commit_right(&mut self, max_width: usize) {
-        if self.commit_horizontal_scroll + 4 < max_width {
-            self.commit_horizontal_scroll += 4;
-        }
-    }
-    
-    pub fn reset_diff_scroll(&mut self) {
-        self.diff_scroll = 0;
-        self.diff_horizontal_scroll = 0;
-    }
-
-    pub fn update_terminal_height(&mut self, height: u16) {
-        self.terminal_height = height;
-    }
-
     pub fn handle_resize(&mut self, width: u16, height: u16) {
         let old_effective_layout = self.effective_layout();
         
-        self.terminal_height = height;
-        self.terminal_width = width;
+        self.ui_state.handle_resize(width, height);
         
         // Check if effective layout changed (for Auto mode)
         let new_effective_layout = self.effective_layout();
         if old_effective_layout != new_effective_layout && !self.current_diff.is_empty() {
             self.update_side_by_side_diff(&self.current_diff.clone());
-        }
-        
-        // Recalculate scroll bounds if window got smaller
-        if self.diff_horizontal_scroll > width as usize {
-            self.diff_horizontal_scroll = (width as usize).saturating_sub(10);
-        }
-        if self.commit_horizontal_scroll > width as usize {
-            self.commit_horizontal_scroll = (width as usize).saturating_sub(10);
         }
     }
 
@@ -474,18 +395,6 @@ impl App {
             AppMode::History { file_path, .. } => Some(file_path),
             AppMode::FilePicker { .. } => None,
         }
-    }
-
-    pub fn increase_split_ratio(&mut self) {
-        self.split_ratio = (self.split_ratio + 0.05).min(0.7);
-    }
-
-    pub fn decrease_split_ratio(&mut self) {
-        self.split_ratio = (self.split_ratio - 0.05).max(0.2);
-    }
-
-    pub fn toggle_help(&mut self) {
-        self.show_help = !self.show_help;
     }
 
     pub fn toggle_diff_range_selection(&mut self) -> Result<()> {
@@ -577,114 +486,20 @@ impl App {
     }
 
     pub fn handle_key(&mut self, key: crossterm::event::KeyEvent) -> Result<()> {
-        use crossterm::event::{KeyCode, KeyModifiers};
-
         // Handle file picker mode separately
         if matches!(self.mode, AppMode::FilePicker { .. }) {
             return self.handle_file_picker_key(key);
         }
 
-        match (key.code, key.modifiers) {
-            (KeyCode::Char('q'), KeyModifiers::NONE) => self.quit(),
-            (KeyCode::Esc, _) => {
-                if self.show_help {
-                    self.show_help = false;
-                } else if self.diff_range_start.is_some() {
-                    self.clear_diff_range_selection();
-                } else {
-                    self.quit();
-                }
-            }
-            (KeyCode::Tab, KeyModifiers::NONE) => {
-                self.switch_focus();
-            }
-            (KeyCode::Up, KeyModifiers::NONE) | (KeyCode::Char('k'), KeyModifiers::NONE) => {
-                if let Some(focused_panel) = self.get_focused_panel() {
-                    match focused_panel {
-                        FocusedPanel::Commits => self.move_selection_up()?,
-                        FocusedPanel::Diff => self.scroll_diff_up(),
-                    }
-                }
-            }
-            (KeyCode::Down, KeyModifiers::NONE) | (KeyCode::Char('j'), KeyModifiers::NONE) => {
-                if let Some(focused_panel) = self.get_focused_panel() {
-                    match focused_panel {
-                        FocusedPanel::Commits => self.move_selection_down()?,
-                        FocusedPanel::Diff => self.scroll_diff_down(),
-                    }
-                }
-            }
-            (KeyCode::PageUp, _) => {
-                // Always scroll diff for PageUp/PageDown regardless of focus
-                self.scroll_diff_page_up();
-            }
-            (KeyCode::PageDown, _) => {
-                // Always scroll diff for PageUp/PageDown regardless of focus
-                self.scroll_diff_page_down();
-            }
-            // Mac-friendly vim-style navigation
-            (KeyCode::Char('u'), KeyModifiers::CONTROL) => {
-                // Ctrl+U = Page Up (vim-style)
-                self.scroll_diff_page_up();
-            }
-            (KeyCode::Char('d'), KeyModifiers::CONTROL) => {
-                // Ctrl+D = Page Down (vim-style)
-                self.scroll_diff_page_down();
-            }
-            // Mac-friendly emacs-style navigation
-            (KeyCode::Char('b'), KeyModifiers::CONTROL) => {
-                // Ctrl+B = Page Up (emacs-style)
-                self.scroll_diff_page_up();
-            }
-            (KeyCode::Char('f'), KeyModifiers::CONTROL) => {
-                // Ctrl+F = Page Down (emacs-style)
-                self.scroll_diff_page_down();
-            }
-            // Horizontal scrolling
-            (KeyCode::Char('a'), KeyModifiers::NONE) => {
-                if let Some(focused_panel) = self.get_focused_panel() {
-                    match focused_panel {
-                        FocusedPanel::Commits => self.scroll_commit_left(),
-                        FocusedPanel::Diff => self.scroll_diff_left(),
-                    }
-                }
-            }
-            (KeyCode::Char('s'), KeyModifiers::NONE) => {
-                if let Some(focused_panel) = self.get_focused_panel() {
-                    match focused_panel {
-                        FocusedPanel::Commits => {
-                            let max_width = self.calculate_max_commit_line_width();
-                            self.scroll_commit_right(max_width);
-                        }
-                        FocusedPanel::Diff => {
-                            let max_width = self.calculate_max_diff_line_width();
-                            self.scroll_diff_right(max_width);
-                        }
-                    }
-                }
-            }
-            (KeyCode::Char('h'), KeyModifiers::NONE) => {
-                self.decrease_split_ratio();
-            }
-            (KeyCode::Char('l'), KeyModifiers::NONE) => {
-                self.increase_split_ratio();
-            }
-            (KeyCode::Char('f'), KeyModifiers::NONE) => {
-                // Open file picker to switch files
-                if let Err(e) = self.switch_to_file_picker() {
-                    self.error_message = Some(format!("Failed to open file picker: {}", e));
-                }
-            }
-            (KeyCode::Char('/'), KeyModifiers::NONE) => {
-                // TODO: Start search
-            }
-            (KeyCode::Char('d'), KeyModifiers::NONE) => {
-                self.toggle_diff_range_selection()?;
-            }
-            (KeyCode::Char('?'), KeyModifiers::NONE) => {
-                self.toggle_help();
-            }
-            _ => {}
+        // Try handling with the specialized event handlers
+        if self.handle_navigation_keys(key)? {
+            return Ok(());
+        }
+        if self.handle_scrolling_keys(key)? {
+            return Ok(());
+        }
+        if self.handle_ui_keys(key)? {
+            return Ok(());
         }
 
         Ok(())
@@ -787,5 +602,11 @@ impl App {
             .map(|commit| format!("{} {}", commit.hash, commit.subject).chars().count())
             .max()
             .unwrap_or(0)
+    }
+    
+    // Delegate to UIState for scroll calculation
+    #[allow(dead_code)] // Used in tests
+    pub fn get_page_scroll_size(&self) -> usize {
+        self.ui_state.get_page_scroll_size()
     }
 }

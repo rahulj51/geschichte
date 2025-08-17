@@ -37,10 +37,10 @@ mod test {
     fn test_dynamic_scroll_sizing() {
         let mut app = create_test_app();
         
-        app.update_terminal_height(50);
+        app.handle_resize(80, 50);
         let large_scroll = app.get_page_scroll_size();
         
-        app.update_terminal_height(20);
+        app.handle_resize(80, 20);
         let small_scroll = app.get_page_scroll_size();
         
         assert!(large_scroll > small_scroll);
@@ -90,10 +90,10 @@ mod test {
     fn test_scroll_adapts_to_terminal_size() {
         let mut app = create_test_app();
         
-        app.update_terminal_height(100);
+        app.handle_resize(80, 100);
         let large_scroll = app.get_page_scroll_size();
         
-        app.update_terminal_height(20);
+        app.handle_resize(80, 20);
         let small_scroll = app.get_page_scroll_size();
         
         assert!(large_scroll > small_scroll);

@@ -35,6 +35,7 @@ pub fn create_test_app() -> geschichte::app::App {
         3,
         false,
         false,
+        geschichte::cli::LayoutMode::Auto,
     )
 }
 
@@ -46,6 +47,7 @@ pub fn create_test_app_with_commits() -> geschichte::app::App {
         3,
         false,
         false,
+        geschichte::cli::LayoutMode::Auto,
     );
     
     let commits = geschichte::git::history::fetch_commit_history(
