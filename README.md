@@ -73,6 +73,31 @@ cargo install geschichte
 brew install geschichte
 ```
 
+## Zed Integration
+Geschichte can be integrated into the [Zed](https://zed.dev) IDE for a seamless development experience. You can open Geschichte in a terminal window within Zed to quickly access file history. To set up Geschichte in Zed, follow these steps:
+1. Open Zed and go to the settings.
+2. Create a Task in ~/config/zed/tasks.json with the following configuration:
+```json
+{
+  "label": "Geschichte - Show File history",
+  "command": "geschichte \"$ZED_RELATIVE_FILE\"",
+}
+```
+3. Use custome key bindings to run the task, or run it from the command palette.
+```json
+[
+	{
+  "context": "Workspace",
+  "bindings": {
+    "alt-g": [
+      "task::Spawn",
+      { "task_name": "Geschichte - Show file history", "reveal_target": "center" }
+    ]
+  }
+}
+]
+```
+
 ## Usage
 
 ### Basic Usage
