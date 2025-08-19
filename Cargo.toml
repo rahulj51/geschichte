@@ -3,11 +3,11 @@ name = "geschichte"
 version = "0.1.0"
 edition = "2021"
 authors = ["Geschichte Contributors"]
-description = "A blazingly fast terminal UI for viewing git file history and diffs with rename tracking and working directory support"
+description = "A blazingly fast, read-only terminal UI for viewing git file history and diffs with rename tracking and working directory support"
 license = "MIT"
 readme = "README.md"
-homepage = "https://github.com/yourusername/geschichte"
-repository = "https://github.com/yourusername/geschichte"
+homepage = "https://github.com/rahulj51/geschichte"
+repository = "https://github.com/rahulj51/geschichte"
 documentation = "https://docs.rs/geschichte"
 keywords = ["git", "tui", "history", "diff", "terminal"]
 categories = ["command-line-utilities", "development-tools"]
@@ -17,6 +17,8 @@ exclude = [
     ".github/",
     "demo/",
     "screenshots/",
+    "plans",
+    "test_scripts"
 ]
 
 # The minimum supported Rust version
