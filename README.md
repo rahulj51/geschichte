@@ -121,6 +121,7 @@ Arguments:
 Options:
   -C, --repo <DIR>             Repository root directory (auto-discovered if not specified)
   -L, --lines <CONTEXT_LINES>  Number of context lines in diffs [default: 3]
+      --full-file              Show full file content in diffs instead of just context around changes
   -s, --side-by-side           Enable side-by-side diff view (three-panel layout)
       --layout <MODE>          Layout mode: unified, side-by-side, or auto [default: unified]
       --first-parent           Show only first-parent commits (linearize merges)
@@ -145,6 +146,9 @@ geschichte --layout auto src/app.rs
 # More context in diffs
 geschichte -L 10 src/main.rs
 
+# Show full file content in diffs (useful for small files)
+geschichte --full-file src/config.rs
+
 # Disable rename tracking for performance
 geschichte --no-follow large-file.txt
 
@@ -153,6 +157,7 @@ geschichte --first-parent main.rs
 
 # Combine options
 geschichte -s -L 5 --first-parent src/main.rs
+geschichte --full-file --side-by-side README.md
 ```
 
 ## Keybindings

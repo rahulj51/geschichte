@@ -31,6 +31,10 @@ pub struct Args {
     #[arg(short = 'L', long = "lines", default_value = "3")]
     pub context_lines: u32,
 
+    /// Show full file content in diffs instead of just context around changes
+    #[arg(long = "full-file")]
+    pub full_file: bool,
+
     /// Show only first-parent commits (linearize merge commits)
     #[arg(long = "first-parent")]
     pub first_parent: bool,
@@ -54,11 +58,21 @@ pub struct Args {
 
 impl Args {
     pub fn validate(&self) -> Result<(), String> {
-        if self.context_lines > 100 {
+        if !self.full_file && self.context_lines > 100 {
             return Err("Context lines must be between 0 and 100".to_string());
         }
 
         Ok(())
+    }
+    
+    /// Get the effective context lines, considering the full-file flag
+    pub fn effective_context_lines(&self) -> u32 {
+        if self.full_file {
+            // Use a very large number to show the full file
+            9999
+        } else {
+            self.context_lines
+        }
     }
 
     /// Get the effective layout mode, considering both --side-by-side flag and --layout option

@@ -59,6 +59,7 @@ fn run(args: cli::Args) -> Result<()> {
 
     // Get the effective layout mode
     let layout_mode = args.effective_layout();
+    let effective_context_lines = args.effective_context_lines();
 
     // Create application state based on whether file argument was provided
     let mut app = if let Some(file_path_arg) = args.file_path {
@@ -76,7 +77,7 @@ fn run(args: cli::Args) -> Result<()> {
         let mut app = app::App::new_history(
             repo_root,
             relative_path,
-            args.context_lines,
+            effective_context_lines,
             !args.no_follow,
             args.first_parent,
             layout_mode,
@@ -93,7 +94,7 @@ fn run(args: cli::Args) -> Result<()> {
         // No file argument - use file picker mode
         match app::App::new_file_picker(
             repo_root,
-            args.context_lines,
+            effective_context_lines,
             !args.no_follow,
             args.first_parent,
             layout_mode,
