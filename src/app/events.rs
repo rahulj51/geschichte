@@ -51,7 +51,8 @@ impl App {
             }
             (KeyCode::PageDown, _) => {
                 // Always scroll diff for PageUp/PageDown regardless of focus
-                self.ui_state.scroll_diff_page_down();
+                let max_lines = self.get_diff_line_count();
+                self.ui_state.scroll_diff_page_down(max_lines);
                 Ok(true)
             }
             // Mac-friendly vim-style navigation
@@ -62,7 +63,8 @@ impl App {
             }
             (KeyCode::Char('d'), KeyModifiers::CONTROL) => {
                 // Ctrl+D = Page Down (vim-style)
-                self.ui_state.scroll_diff_page_down();
+                let max_lines = self.get_diff_line_count();
+                self.ui_state.scroll_diff_page_down(max_lines);
                 Ok(true)
             }
             // Mac-friendly emacs-style navigation
@@ -73,7 +75,8 @@ impl App {
             }
             (KeyCode::Char('f'), KeyModifiers::CONTROL) => {
                 // Ctrl+F = Page Down (emacs-style)
-                self.ui_state.scroll_diff_page_down();
+                let max_lines = self.get_diff_line_count();
+                self.ui_state.scroll_diff_page_down(max_lines);
                 Ok(true)
             }
             // Horizontal scrolling (but not when in copy mode)

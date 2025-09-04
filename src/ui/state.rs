@@ -72,8 +72,15 @@ impl UIState {
         }
     }
 
-    pub fn scroll_diff_down(&mut self) {
-        self.diff_scroll += 1;
+    pub fn scroll_diff_down(&mut self, max_lines: usize) {
+        // Ensure we don't scroll past the content
+        // Account for viewport height to prevent scrolling too far
+        let viewport_height = self.get_visible_lines(&crate::cli::LayoutMode::Unified);
+        let max_scroll = max_lines.saturating_sub(viewport_height);
+        
+        if self.diff_scroll < max_scroll {
+            self.diff_scroll += 1;
+        }
     }
 
     pub fn scroll_diff_page_up(&mut self) {
@@ -81,9 +88,13 @@ impl UIState {
         self.diff_scroll = self.diff_scroll.saturating_sub(page_size);
     }
 
-    pub fn scroll_diff_page_down(&mut self) {
+    pub fn scroll_diff_page_down(&mut self, max_lines: usize) {
         let page_size = self.get_page_scroll_size();
-        self.diff_scroll += page_size;
+        let viewport_height = self.get_visible_lines(&crate::cli::LayoutMode::Unified);
+        let max_scroll = max_lines.saturating_sub(viewport_height);
+        
+        // Ensure we don't scroll past the content
+        self.diff_scroll = (self.diff_scroll + page_size).min(max_scroll);
     }
 
     pub fn scroll_diff_left(&mut self) {

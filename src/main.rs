@@ -15,6 +15,21 @@ use crossterm::event::{self, Event, MouseEvent, MouseEventKind, MouseButton, Ena
 use std::time::Duration;
 
 fn main() -> Result<()> {
+    // Set up panic handler to restore terminal on crash
+    let original_panic_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |panic_info| {
+        // Try to restore terminal
+        let _ = crossterm::execute!(std::io::stdout(), DisableMouseCapture);
+        let _ = crossterm::terminal::disable_raw_mode();
+        let _ = crossterm::execute!(
+            std::io::stdout(),
+            crossterm::terminal::LeaveAlternateScreen
+        );
+        
+        // Call the original panic handler
+        original_panic_hook(panic_info);
+    }));
+
     // Parse command line arguments
     let args = cli::Args::parse();
     
@@ -224,7 +239,8 @@ fn handle_mouse_event(app: &mut app::App, mouse_event: MouseEvent) -> Result<()>
         MouseEventKind::ScrollDown => {
             match get_panel_at_position(app, mouse_event.column, mouse_event.row) {
                 Some(PanelType::Diff) => {
-                    app.ui_state.scroll_diff_down();
+                    let max_lines = app.get_diff_line_count();
+                    app.ui_state.scroll_diff_down(max_lines);
                 }
                 Some(PanelType::Commits) => {
                     if app.selected_index + 1 < app.commits.len() {
