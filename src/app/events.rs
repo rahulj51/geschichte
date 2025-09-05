@@ -131,6 +131,8 @@ impl App {
                     self.ui_state.show_help = false;
                 } else if self.show_commit_info {
                     self.hide_commit_info_popup();
+                } else if self.diff_search_state.is_some() {
+                    self.clear_diff_search();
                 } else if self.copy_mode.is_some() {
                     self.cancel_copy_mode();
                 } else if self.diff_range_start.is_some() {
@@ -156,8 +158,12 @@ impl App {
                 Ok(true)
             }
             (KeyCode::Char('/'), KeyModifiers::NONE) => {
-                // TODO: Start search
-                Ok(true)
+                if !self.show_commit_info && self.get_focused_panel() == Some(FocusedPanel::Diff) {
+                    self.start_diff_search();
+                    Ok(true)
+                } else {
+                    Ok(false) // Let other handlers deal with it
+                }
             }
             (KeyCode::Char('d'), KeyModifiers::NONE) => {
                 self.toggle_diff_range_selection()?;
@@ -257,6 +263,27 @@ impl App {
     }
 
     pub fn handle_change_navigation_keys(&mut self, key: KeyEvent) -> Result<bool> {
+        // Check if we're in active search mode first
+        if let Some(ref search_state) = self.diff_search_state {
+            if search_state.is_active
+                && !search_state.is_input_mode
+                && !search_state.results.is_empty()
+            {
+                match (key.code, key.modifiers) {
+                    (KeyCode::Char('n'), KeyModifiers::NONE) => {
+                        self.navigate_to_next_search_result()?;
+                        return Ok(true);
+                    }
+                    (KeyCode::Char('N'), KeyModifiers::SHIFT) => {
+                        self.navigate_to_previous_search_result()?;
+                        return Ok(true);
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        // Existing hunk navigation logic
         match (key.code, key.modifiers) {
             (KeyCode::Char('n'), KeyModifiers::NONE) => {
                 if self.copy_mode.is_some() {
@@ -271,6 +298,42 @@ impl App {
                 Ok(true)
             }
             _ => Ok(false),
+        }
+    }
+
+    pub fn handle_search_input_keys(&mut self, key: KeyEvent) -> Result<bool> {
+        if let Some(ref mut search_state) = self.diff_search_state {
+            if !search_state.is_input_mode {
+                return Ok(false);
+            }
+
+            match (key.code, key.modifiers) {
+                (KeyCode::Char(c), KeyModifiers::NONE) => {
+                    search_state.query.push(c);
+                    self.update_search_results()?;
+                    Ok(true)
+                }
+                (KeyCode::Backspace, KeyModifiers::NONE) => {
+                    search_state.query.pop();
+                    self.update_search_results()?;
+                    Ok(true)
+                }
+                (KeyCode::Enter, KeyModifiers::NONE) => {
+                    search_state.is_input_mode = false;
+                    if !search_state.results.is_empty() {
+                        search_state.current_result = Some(0);
+                        self.scroll_to_search_result(0)?;
+                    }
+                    Ok(true)
+                }
+                (KeyCode::Esc, _) => {
+                    self.clear_diff_search();
+                    Ok(true)
+                }
+                _ => Ok(false),
+            }
+        } else {
+            Ok(false)
         }
     }
 }

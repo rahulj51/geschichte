@@ -74,7 +74,8 @@ fn draw_diff_panel(frame: &mut Frame, app: &App, area: Rect) {
     let file_path = app.get_file_path().map(|p| p.as_path());
 
     let highlighted_diff = HighlightedDiff::new(&app.current_diff, file_path);
-    let all_styled_lines = highlighted_diff.to_styled_lines();
+    let all_styled_lines =
+        highlighted_diff.to_styled_lines_with_search(app.diff_search_state.as_ref());
 
     // Apply both vertical AND horizontal scrolling with cursor highlighting
     let styled_lines: Vec<Line> = all_styled_lines

@@ -8,6 +8,7 @@ use crate::diff::side_by_side::SideBySideDiff;
 use crate::error::Result;
 use crate::ui::file_picker::FilePickerState;
 use crate::ui::state::UIState;
+use regex::Regex;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -34,6 +35,24 @@ pub enum AppMode {
 pub enum FilePickerContext {
     Initial,                               // Started with no file argument
     SwitchFile { previous_file: PathBuf }, // Switching from an existing file
+}
+
+#[derive(Debug, Clone)]
+pub struct DiffSearchState {
+    pub query: String,
+    pub is_active: bool,               // Currently in search mode
+    pub is_input_mode: bool,           // Currently typing search query
+    pub results: Vec<SearchMatch>,     // All matches found
+    pub current_result: Option<usize>, // Index of highlighted result
+    pub regex: Option<Regex>,          // Compiled regex for performance
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SearchMatch {
+    pub line_index: usize, // Index in diff lines
+    pub char_start: usize, // Start position in line
+    pub char_end: usize,   // End position in line
+    pub content: String,   // Matched text for highlighting
 }
 
 pub struct App {
@@ -81,6 +100,9 @@ pub struct App {
 
     // Message timing
     pub message_timer: Option<std::time::Instant>,
+
+    // Diff search state
+    pub diff_search_state: Option<DiffSearchState>,
 }
 
 impl App {
@@ -141,6 +163,7 @@ impl App {
             current_changes: Vec::new(),
             current_change_index: None,
             message_timer: None,
+            diff_search_state: None,
         })
     }
 
@@ -182,6 +205,7 @@ impl App {
             current_changes: Vec::new(),
             current_change_index: None,
             message_timer: None,
+            diff_search_state: None,
         }
     }
 
@@ -200,6 +224,7 @@ impl App {
         self.ui_state.reset_diff_scroll();
         self.diff_cache.clear();
         self.clear_change_cache();
+        self.clear_diff_search();
 
         // Load git data for the new file
         self.load_git_data()
@@ -382,6 +407,8 @@ impl App {
             if self.diff_range_start.is_none() {
                 self.current_diff_range = None;
             }
+            // Clear search when navigating to different commit
+            self.clear_diff_search();
             self.load_diff_for_selected_commit()?;
         }
         Ok(())
@@ -394,6 +421,8 @@ impl App {
             if self.diff_range_start.is_none() {
                 self.current_diff_range = None;
             }
+            // Clear search when navigating to different commit
+            self.clear_diff_search();
             self.load_diff_for_selected_commit()?;
         }
         Ok(())
@@ -528,6 +557,11 @@ impl App {
     }
 
     pub fn handle_key(&mut self, key: crossterm::event::KeyEvent) -> Result<()> {
+        // Handle search input first if active
+        if self.handle_search_input_keys(key)? {
+            return Ok(());
+        }
+
         // Handle file picker mode separately
         if matches!(self.mode, AppMode::FilePicker { .. }) {
             return self.handle_file_picker_key(key);
@@ -1009,5 +1043,132 @@ impl App {
         }
 
         Ok(())
+    }
+
+    // Diff search functionality
+    pub fn start_diff_search(&mut self) {
+        self.diff_search_state = Some(DiffSearchState {
+            query: String::new(),
+            is_active: true,
+            is_input_mode: true,
+            results: Vec::new(),
+            current_result: None,
+            regex: None,
+        });
+    }
+
+    pub fn update_search_results(&mut self) -> Result<()> {
+        if let Some(ref mut search_state) = self.diff_search_state {
+            if search_state.query.is_empty() {
+                search_state.results.clear();
+                search_state.current_result = None;
+                search_state.regex = None;
+                return Ok(());
+            }
+
+            // Compile regex (case-insensitive by default, true regex search)
+            let regex = match Regex::new(&format!("(?i){}", &search_state.query)) {
+                Ok(r) => r,
+                Err(_e) => {
+                    // Clear search state on invalid regex and show error in status
+                    search_state.results.clear();
+                    search_state.current_result = None;
+                    search_state.regex = None;
+
+                    // Don't propagate error - just show no results for invalid regex
+                    // This provides better UX as user types
+                    return Ok(());
+                }
+            };
+
+            // Search through current diff content, but only in actual code lines
+            // Parse the diff to get structured information about line types
+            let parsed_lines = crate::diff::parse_diff(&self.current_diff);
+            let mut results = Vec::new();
+
+            for (line_idx, parsed_line) in parsed_lines.iter().enumerate() {
+                // Only search in actual code content lines, skip headers and hunk headers
+                match parsed_line.line_type {
+                    crate::diff::DiffLineType::Addition
+                    | crate::diff::DiffLineType::Deletion
+                    | crate::diff::DiffLineType::Context => {
+                        // Search in this line's content
+                        for mat in regex.find_iter(&parsed_line.content) {
+                            results.push(SearchMatch {
+                                line_index: line_idx,
+                                char_start: mat.start(),
+                                char_end: mat.end(),
+                                content: mat.as_str().to_string(),
+                            });
+                        }
+                    }
+                    crate::diff::DiffLineType::Header | crate::diff::DiffLineType::HunkHeader => {
+                        // Skip headers and hunk headers - don't search these
+                        continue;
+                    }
+                }
+            }
+
+            search_state.results = results;
+            search_state.regex = Some(regex);
+        }
+        Ok(())
+    }
+
+    pub fn navigate_to_next_search_result(&mut self) -> Result<()> {
+        if let Some(ref mut search_state) = self.diff_search_state {
+            if search_state.results.is_empty() {
+                return Ok(());
+            }
+
+            let next_index = match search_state.current_result {
+                Some(idx) => (idx + 1) % search_state.results.len(),
+                None => 0,
+            };
+
+            search_state.current_result = Some(next_index);
+            self.scroll_to_search_result(next_index)?;
+        }
+        Ok(())
+    }
+
+    pub fn navigate_to_previous_search_result(&mut self) -> Result<()> {
+        if let Some(ref mut search_state) = self.diff_search_state {
+            if search_state.results.is_empty() {
+                return Ok(());
+            }
+
+            let prev_index = match search_state.current_result {
+                Some(idx) => {
+                    if idx == 0 {
+                        search_state.results.len() - 1
+                    } else {
+                        idx - 1
+                    }
+                }
+                None => search_state.results.len() - 1,
+            };
+
+            search_state.current_result = Some(prev_index);
+            self.scroll_to_search_result(prev_index)?;
+        }
+        Ok(())
+    }
+
+    pub fn scroll_to_search_result(&mut self, result_index: usize) -> Result<()> {
+        if let Some(ref search_state) = self.diff_search_state {
+            if let Some(search_match) = search_state.results.get(result_index) {
+                // Scroll diff view to ensure the match is visible
+                let target_line = search_match.line_index;
+                let layout_mode = self.effective_layout();
+                self.ui_state
+                    .ensure_diff_line_visible(target_line, &layout_mode);
+            }
+        }
+        Ok(())
+    }
+
+    pub fn clear_diff_search(&mut self) {
+        self.diff_search_state = None;
     }
 }

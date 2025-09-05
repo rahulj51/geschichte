@@ -30,6 +30,7 @@ I wrote this because I was badly missing this feature in 'Zed', my primary IDE. 
 - **Working directory support** - See uncommitted changes as the top entry
 - **Interactive navigation** with vim-style keybindings and focus-aware panels
 - **Colorized diffs** with visual highlighting for additions, deletions, and context
+- **In-diff search** - Find specific code patterns with context-aware highlighting
 - **Commit-to-commit diff** - Select any two commits to see changes between them
 - **Rename tracking** - Follow files across renames and moves (with `--follow`)
 - **Performance optimized** with LRU caching for instant diff switching
@@ -194,11 +195,12 @@ geschichte --full-file --side-by-side README.md
 | `f` | Open file picker to switch to another file |
 | `d` | Mark/diff between commits - select two commits to compare |
 
-### Change Navigation
+### Change Navigation & Search
 | Key | Action |
 |-----|--------|
-| `n` | Navigate to next change (addition/deletion) |
-| `N` | Navigate to previous change |
+| `/` | Start search in diff content |
+| `n` | Navigate to next change (or next search result when searching) |
+| `N` | Navigate to previous change (or previous search result when searching) |
 
 ### Commit Information & Copy
 | Key | Action |
@@ -228,6 +230,13 @@ geschichte --full-file --side-by-side README.md
 | `Ctrl+Q` | Return to previous file (or quit if no previous file) |
 | Type characters | Fuzzy search files |
 | `Ctrl+U` | Clear search |
+
+### Search (when active)
+| Key | Action |
+|-----|--------|
+| Type characters | Search for text in diff content |
+| `Enter` | Finish typing and navigate to first result |
+| `Esc` | Cancel search and return to normal mode |
 
 ### General
 | Key | Action |
@@ -342,6 +351,77 @@ Geschichte provides comprehensive commit metadata through an interactive popup t
 
 The commit popup integrates seamlessly with the copy system - you can copy any commit information directly from the detailed view without leaving the popup.
 
+## Search in Diff Content
+
+Geschichte provides powerful search functionality to help you find specific code patterns, functions, or text within diff content across all your commits.
+
+### How to Use Search
+
+1. **Start Search**: Press `/` while viewing a diff to enter search mode
+2. **Type Query**: Start typing your search term (case-insensitive by default)
+3. **Navigate Results**: Press `Enter` to finish typing, then use `n`/`N` to move between matches
+4. **Exit Search**: Press `Esc` to clear search and return to normal navigation
+
+### Search Features
+
+**Regex-Powered Search**:
+- **Full regex support**: Use patterns like `searc.` to match "search", `fn.*test` to find functions, `[0-9]+` for numbers
+- **Case-insensitive by default**: Searches ignore case automatically
+- **Graceful error handling**: Invalid regex patterns simply show no results
+
+**Smart Scope**:
+- **Searches only code content**: Excludes file headers, hunk headers, and metadata
+- **Includes all relevant lines**: Addition lines (`+`), deletion lines (`-`), and context lines
+- **Works across commits**: Search persists when navigating between commits until cleared
+
+**Visual Highlighting**:
+- **Context-aware colors**: Highlights adapt to diff line backgrounds for maximum visibility
+- **Current match emphasis**: Active search result uses bright highlighting
+- **Multiple match support**: All matches on a line are highlighted with distinct colors
+
+**Navigation Integration**:
+- **Smart `n`/`N` keys**: Automatically switch between search navigation and change navigation
+- **Status bar feedback**: Shows match count, current position, and search query
+- **Cross-layout support**: Works in both unified and side-by-side diff views
+
+### Visual Example
+
+When searching with regex patterns:
+```bash
+# Literal search: "function"
+# Status bar: "3/7 matches for 'function' | n/N: next/prev | Esc: exit search"
+
+# Regex search: "fn.*test"  
+# Status bar: "2/4 matches for 'fn.*test' | n/N: next/prev | Esc: exit search"
+
+@@ -10,6 +10,8 @@ impl MyStruct {
+ impl MyStruct {
+-    fn old_function() {        # ← highlighted if matches pattern
++    fn new_function(x: i32) {  # ← highlighted if matches pattern  
+         // implementation
+     }
+}
+```
+
+### Search Behavior
+
+- **Full regex support**: All regex features work - wildcards (`.`), quantifiers (`*`, `+`, `?`), character classes (`[a-z]`), word boundaries (`\b`), etc.
+- **Case-insensitive by default**: All patterns are automatically case-insensitive
+- **Real-time updates**: Results update as you type (invalid patterns show no matches)
+- **Memory efficient**: Only searches visible diff content, not entire repository
+- **Cross-view consistency**: Same regex experience in unified and side-by-side modes
+
+### Common Regex Examples
+
+| Pattern | Matches | Use Case |
+|---------|---------|----------|
+| `searc.` | "search", "searck" | Find similar words |
+| `fn.*test` | "fn my_test", "function test_case" | Find functions containing "test" |
+| `[0-9]+` | "123", "42" | Find numbers |
+| `\btest\b` | "test" (whole word only) | Exact word match |
+| `(let\|const)` | "let" or "const" | Multiple alternatives |
+| `TODO.*:` | "TODO: fix this" | Find TODO comments |
+
 ### Example Popup Content
 
 ```
@@ -370,7 +450,6 @@ The commit popup integrates seamlessly with the copy system - you can copy any c
 ### Coming Soon
 | Key | Action |
 |-----|--------|
-| `/` | Search in diff |
 | `m` | Cycle merge parents |
 
 ## Interface
@@ -430,15 +509,16 @@ The commit popup integrates seamlessly with the copy system - you can copy any c
 ## 🛣Roadmap
 
 ### Recently Completed ✅
+- **In-diff search** - Search within diff content with context-aware highlighting
 - **Copy commit hash** - Quick clipboard integration with multiple formats
 - **Detailed commit information** - Comprehensive metadata popups
 - **Enhanced commit metadata** - Author/committer details, refs, PR detection
 - **Commit statistics** - Files changed, insertions, deletions display
 
 ### Upcoming Features
-- **In-diff search** - Search within diff content with regex support
 - **Merge parent cycling** - Navigate through merge commit parents
 - **Enhanced copy options** - More format options and integrations
+- **Advanced search options** - Regex patterns, match case toggle, and search history
 
 ### Future Enhancements
 - **Performance optimizations** - Handle massive repositories efficiently

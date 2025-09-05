@@ -164,6 +164,28 @@ impl UIState {
                 .saturating_sub(visible_lines.saturating_sub(1));
         }
     }
+
+    pub fn ensure_diff_line_visible(
+        &mut self,
+        target_line: usize,
+        layout_mode: &crate::cli::LayoutMode,
+    ) {
+        let visible_lines = self.get_visible_lines(layout_mode);
+
+        // If target line is above the current scroll, scroll up
+        if target_line < self.diff_scroll {
+            self.diff_scroll = target_line;
+        }
+        // If target line is below the visible area, scroll down to center it
+        else if target_line >= self.diff_scroll + visible_lines {
+            // Try to center the target line in the viewport
+            let half_viewport = visible_lines / 2;
+            self.diff_scroll = target_line.saturating_sub(half_viewport);
+        }
+
+        // Also update cursor position to the target line
+        self.diff_cursor_line = target_line;
+    }
 }
 
 impl Default for UIState {

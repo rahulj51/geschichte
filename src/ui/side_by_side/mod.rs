@@ -75,8 +75,14 @@ fn draw_old_file_panel(frame: &mut Frame, app: &App, area: Rect) {
             .map(|(global_line_index, line_opt)| {
                 let styled_line = match line_opt {
                     Some(line) => {
-                        // Use the proper syntax highlighting and styling
-                        style_side_by_side_line(line, true, app.get_file_path())
+                        // Use the proper syntax highlighting and styling with search support
+                        style_side_by_side_line(
+                            line,
+                            true,
+                            app.get_file_path(),
+                            global_line_index,
+                            app.diff_search_state.as_ref(),
+                        )
                         // true = old file
                     }
                     None => {
@@ -145,8 +151,14 @@ fn draw_new_file_panel(frame: &mut Frame, app: &App, area: Rect) {
             .map(|(global_line_index, line_opt)| {
                 let styled_line = match line_opt {
                     Some(line) => {
-                        // Use the proper syntax highlighting and styling
-                        style_side_by_side_line(line, false, app.get_file_path())
+                        // Use the proper syntax highlighting and styling with search support
+                        style_side_by_side_line(
+                            line,
+                            false,
+                            app.get_file_path(),
+                            global_line_index,
+                            app.diff_search_state.as_ref(),
+                        )
                         // false = new file
                     }
                     None => {
@@ -187,6 +199,8 @@ fn style_side_by_side_line(
     line: &DiffLine,
     is_old_file: bool,
     file_path: Option<&PathBuf>,
+    line_index: usize,
+    search_state: Option<&crate::app::DiffSearchState>,
 ) -> Line<'static> {
     match line.line_type {
         DiffLineType::Header => {
@@ -297,7 +311,19 @@ fn style_side_by_side_line(
                 spans.push(Span::styled(code_content.clone(), final_style));
             }
 
-            Line::from(spans)
+            let mut styled_line = Line::from(spans);
+
+            // Apply search highlighting if active - only for code lines
+            if let Some(search_state) = search_state {
+                styled_line = apply_side_by_side_search_highlighting(
+                    styled_line,
+                    line_index,
+                    search_state,
+                    line,
+                );
+            }
+
+            styled_line
         }
     }
 }
@@ -316,4 +342,164 @@ fn apply_cursor_highlight(line: Line<'static>) -> Line<'static> {
         .collect();
 
     Line::from(highlighted_spans)
+}
+
+/// Apply search highlighting to a side-by-side styled line
+fn apply_side_by_side_search_highlighting(
+    styled_line: Line<'static>,
+    line_index: usize,
+    search_state: &crate::app::DiffSearchState,
+    original_line: &crate::diff::DiffLine,
+) -> Line<'static> {
+    // Find matches for this line
+    let line_matches: Vec<&crate::app::SearchMatch> = search_state
+        .results
+        .iter()
+        .filter(|m| m.line_index == line_index)
+        .collect();
+
+    if line_matches.is_empty() {
+        return styled_line;
+    }
+
+    // Side-by-side structure: [line_number_span] [diff_marker_span] [code_content_spans...]
+    // Similar to unified but with only one line number instead of two
+
+    let mut result_spans = Vec::new();
+
+    for (span_idx, span) in styled_line.spans.into_iter().enumerate() {
+        if span_idx < 2 {
+            // Line number and diff marker spans - keep unchanged
+            result_spans.push(span);
+            continue;
+        }
+
+        // This is a code content span - check if it needs highlighting
+        let span_content = span.content.to_string();
+
+        // Calculate this span's position within the code content
+        let code_content_before: String = result_spans
+            .iter()
+            .skip(2) // Skip line number and diff marker spans
+            .map(|s| s.content.as_ref())
+            .collect();
+
+        let span_start_in_code = code_content_before.len();
+        let span_end_in_code = span_start_in_code + span_content.len();
+
+        // Find matches that overlap with this span's content
+        let overlapping_matches: Vec<&crate::app::SearchMatch> = line_matches
+            .iter()
+            .filter(|m| {
+                // SearchMatch positions are relative to the original line content (including diff marker)
+                // So we need to subtract 1 to get positions relative to code content only
+                let match_start_in_code = m.char_start.saturating_sub(1);
+                let match_end_in_code = m.char_end.saturating_sub(1);
+
+                match_start_in_code < span_end_in_code && match_end_in_code > span_start_in_code
+            })
+            .copied()
+            .collect();
+
+        if overlapping_matches.is_empty() {
+            // No matches in this span
+            result_spans.push(span);
+        } else {
+            // Apply highlighting to this span
+            apply_side_by_side_highlighting_to_span(
+                span,
+                span_start_in_code,
+                &overlapping_matches,
+                search_state,
+                original_line.line_type,
+                &mut result_spans,
+            );
+        }
+    }
+
+    Line::from(result_spans)
+}
+
+/// Apply highlighting to a specific span in side-by-side view
+fn apply_side_by_side_highlighting_to_span(
+    span: Span<'static>,
+    span_start_in_code: usize,
+    overlapping_matches: &[&crate::app::SearchMatch],
+    search_state: &crate::app::DiffSearchState,
+    line_type: crate::diff::DiffLineType,
+    result_spans: &mut Vec<Span<'static>>,
+) {
+    let span_content = span.content.to_string();
+    let mut processed_chars = 0;
+
+    for &search_match in overlapping_matches {
+        // Convert match positions from original line to code-only coordinates
+        let match_start_in_code = search_match.char_start.saturating_sub(1);
+        let match_end_in_code = search_match.char_end.saturating_sub(1);
+
+        // Calculate positions within this specific span
+        let match_start_in_span = match_start_in_code.saturating_sub(span_start_in_code);
+        let match_end_in_span =
+            (match_end_in_code.saturating_sub(span_start_in_code)).min(span_content.len());
+
+        // Skip if match doesn't actually overlap this span
+        if match_start_in_span >= span_content.len() || match_end_in_span == 0 {
+            continue;
+        }
+
+        // Add text before the match
+        if match_start_in_span > processed_chars {
+            let pre_text = span_content
+                .chars()
+                .skip(processed_chars)
+                .take(match_start_in_span - processed_chars)
+                .collect::<String>();
+
+            if !pre_text.is_empty() {
+                result_spans.push(Span::styled(pre_text, span.style));
+            }
+        }
+
+        // Add the highlighted match
+        let match_text = span_content
+            .chars()
+            .skip(match_start_in_span)
+            .take(match_end_in_span - match_start_in_span)
+            .collect::<String>();
+
+        if !match_text.is_empty() {
+            let is_current_match = search_state.current_result.is_some_and(|idx| {
+                idx < search_state.results.len() && &search_state.results[idx] == search_match
+            });
+
+            // Use the same context-aware highlighting as unified view
+            let highlight_style =
+                get_side_by_side_search_highlight_style(is_current_match, line_type);
+
+            result_spans.push(Span::styled(match_text, highlight_style));
+        }
+
+        processed_chars = match_end_in_span;
+    }
+
+    // Add remaining text after all matches
+    if processed_chars < span_content.len() {
+        let remaining_text = span_content
+            .chars()
+            .skip(processed_chars)
+            .collect::<String>();
+
+        if !remaining_text.is_empty() {
+            result_spans.push(Span::styled(remaining_text, span.style));
+        }
+    }
+}
+
+/// Get search highlight style for side-by-side view (reuse the same logic as unified view)
+fn get_side_by_side_search_highlight_style(
+    is_current_match: bool,
+    line_type: crate::diff::DiffLineType,
+) -> Style {
+    // Reuse the same color logic from the unified view
+    crate::diff::get_search_highlight_style(is_current_match, line_type)
 }

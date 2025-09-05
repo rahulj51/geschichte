@@ -43,6 +43,30 @@ pub fn draw_status_bar(frame: &mut Frame, app: &App, area: Rect) {
         return;
     }
 
+    // Check for active search mode
+    if let Some(ref search_state) = app.diff_search_state {
+        let search_status = if search_state.is_input_mode {
+            format!("Search: {}_", search_state.query)
+        } else if search_state.results.is_empty() {
+            format!("No matches for '{}'", search_state.query)
+        } else {
+            let current = search_state.current_result.map_or(0, |i| i + 1);
+            format!(
+                "{}/{} matches for '{}'",
+                current,
+                search_state.results.len(),
+                search_state.query
+            )
+        };
+
+        let search_bar = Paragraph::new(Line::from(vec![Span::styled(
+            format!(" {} | n/N: next/prev | Esc: exit search", search_status),
+            Style::default().fg(Color::Black).bg(Color::Cyan),
+        )]));
+        frame.render_widget(search_bar, area);
+        return;
+    }
+
     // Normal status display
     let focus_hint = match app.get_focused_panel() {
         Some(FocusedPanel::Commits) => {
@@ -149,7 +173,11 @@ pub fn draw_help_overlay(frame: &mut Frame, _app: &App, area: Rect) {
         ]),
         Line::from(vec![
             Span::styled("/", Style::default().fg(Color::Green)),
-            Span::raw("        Search in diff (TODO)"),
+            Span::raw("        Search in diff"),
+        ]),
+        Line::from(vec![
+            Span::styled("n/N", Style::default().fg(Color::Green)),
+            Span::raw("      Next/previous search result"),
         ]),
         Line::from(""),
         Line::from(vec![
