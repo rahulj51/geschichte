@@ -632,6 +632,13 @@ impl App {
 
             // All regular characters for typing (including j, k, q, etc.)
             (KeyCode::Char(c), KeyModifiers::NONE) => {
+                // Filter out escape sequence fragments and control characters
+                // This prevents '[' and other control chars from appearing during rapid arrow key presses
+                if c.is_control() || c == '[' || c == '\x1b' {
+                    // Skip these characters - likely escape sequence fragments or control chars
+                    return Ok(());
+                }
+
                 if let AppMode::FilePicker { ref mut state, .. } = self.mode {
                     state.append_char(c);
                 }

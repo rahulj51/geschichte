@@ -150,17 +150,25 @@ fn run_ui(terminal: &mut terminal::AppTerminal, app: &mut app::App) -> Result<()
 
         // Handle events
         if event::poll(Duration::from_millis(100))? {
-            match event::read()? {
-                Event::Key(key) => {
+            // Add error recovery for malformed terminal input
+            match event::read() {
+                Ok(Event::Key(key)) => {
                     app.handle_key(key)?;
                 }
-                Event::Mouse(mouse_event) => {
+                Ok(Event::Mouse(mouse_event)) => {
                     handle_mouse_event(app, mouse_event)?;
                 }
-                Event::Resize(width, height) => {
+                Ok(Event::Resize(width, height)) => {
                     app.handle_resize(width, height);
                 }
-                _ => {}
+                Ok(_) => {
+                    // Ignore other event types
+                }
+                Err(_) => {
+                    // Skip malformed/unparseable terminal input to prevent crashes
+                    // This can happen with rapid arrow key presses or terminal compatibility issues
+                    continue;
+                }
             }
         }
 
