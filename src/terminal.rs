@@ -17,8 +17,8 @@ pub fn setup_terminal() -> Result<AppTerminal> {
         .map_err(|e| GeschichteError::TerminalError(e.to_string()))?;
 
     let backend = CrosstermBackend::new(stdout);
-    let terminal = Terminal::new(backend)
-        .map_err(|e| GeschichteError::TerminalError(e.to_string()))?;
+    let terminal =
+        Terminal::new(backend).map_err(|e| GeschichteError::TerminalError(e.to_string()))?;
 
     Ok(terminal)
 }

@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod git_history_tests {
-    use geschichte::git::history::detect_pr_info;
     use geschichte::commit::{Commit, PRStatus};
+    use geschichte::git::history::detect_pr_info;
 
     #[test]
     fn test_pr_detection_from_subject() {
@@ -20,7 +20,7 @@ mod git_history_tests {
 
         let pr_info = detect_pr_info(&commit);
         assert!(pr_info.is_some());
-        
+
         let pr = pr_info.unwrap();
         assert_eq!(pr.number, 42);
         assert_eq!(pr.title, "Fix authentication bug (#42)");
@@ -44,7 +44,7 @@ mod git_history_tests {
 
         let pr_info = detect_pr_info(&commit);
         assert!(pr_info.is_some());
-        
+
         let pr = pr_info.unwrap();
         assert_eq!(pr.number, 123);
         assert!(matches!(pr.status, PRStatus::Merged));

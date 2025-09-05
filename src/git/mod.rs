@@ -1,7 +1,7 @@
 pub mod commands;
+pub mod diff;
 pub mod files;
 pub mod history;
-pub mod diff;
 pub mod working;
 
 use crate::error::{GeschichteError, Result};
@@ -36,4 +36,3 @@ pub fn discover_repository(start_path: &Path) -> Result<PathBuf> {
     let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
     Ok(PathBuf::from(path_str))
 }
-

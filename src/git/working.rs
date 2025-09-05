@@ -87,7 +87,7 @@ pub fn fetch_working_directory_diff(
     }
 
     let diff_output = String::from_utf8_lossy(&output.stdout).to_string();
-    
+
     // If no diff output, the working directory might be clean
     if diff_output.trim().is_empty() {
         Ok("Working directory is clean - no changes detected".to_string())
@@ -112,7 +112,7 @@ fn fetch_new_file_diff(repo_root: &Path, file_path: &Path) -> Result<String> {
 
     // git diff --no-index returns exit code 1 when files differ, which is expected
     let diff_output = String::from_utf8_lossy(&output.stdout).to_string();
-    
+
     if diff_output.trim().is_empty() {
         // Fallback: try to show the file as entirely new
         Ok(format!(

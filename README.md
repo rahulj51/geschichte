@@ -55,12 +55,24 @@ I wrote this because I was badly missing this feature in 'Zed', my primary IDE. 
 
 ## Installation
 
+### Requirements
+- **Rust 1.80+** - Update with `rustup update` if you encounter edition2024 errors
+
 ### From Source (Current)
 ```bash
 git clone https://github.com/yourusername/geschichte.git
 cd geschichte
 cargo build --release
 cargo install --path .
+```
+
+**Using the Makefile (Recommended for Development):**
+```bash
+make help          # Show all available commands
+make dev           # Format + lint + test + build
+make install       # Install to ~/.cargo/bin
+make test          # Run all tests
+make lint          # Run clippy + format check
 ```
 
 ### Using Cargo (Coming Soon)
@@ -181,6 +193,12 @@ geschichte --full-file --side-by-side README.md
 |-----|--------|
 | `f` | Open file picker to switch to another file |
 | `d` | Mark/diff between commits - select two commits to compare |
+
+### Change Navigation
+| Key | Action |
+|-----|--------|
+| `n` | Navigate to next change (addition/deletion) |
+| `N` | Navigate to previous change |
 
 ### Commit Information & Copy
 | Key | Action |
@@ -437,15 +455,23 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for gui
 ```bash
 git clone https://github.com/yourusername/geschichte.git
 cd geschichte
-cargo build
-cargo run -- src/main.rs
+make dev          # Format + lint + test + build
+make demo         # Install and run with demo file
 ```
 
-### Running Tests
+### Development Commands
 ```bash
-cargo test
-cargo clippy
-cargo fmt
+make build        # Debug build
+make release      # Optimized build
+make test         # Run all tests
+make lint         # Clippy + format check
+make fmt          # Format code
+make clean        # Clean build artifacts
+
+# Workflows
+make dev          # Full development workflow
+make ci           # Continuous integration checks
+make pre-release  # Release preparation
 ```
 
 ## Performance

@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use crate::fixtures::TestRepo;
+use std::path::PathBuf;
 
 pub fn sample_git_files() -> Vec<geschichte::git::files::GitFile> {
     vec![
@@ -49,14 +49,15 @@ pub fn create_test_app_with_commits() -> geschichte::app::App {
         false,
         geschichte::cli::LayoutMode::Auto,
     );
-    
+
     let commits = geschichte::git::history::fetch_commit_history(
         test_repo.path(),
         &PathBuf::from("test.txt"),
         false,
-        false
-    ).unwrap();
-    
+        false,
+    )
+    .unwrap();
+
     app.commits = commits;
     app
 }

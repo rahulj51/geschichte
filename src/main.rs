@@ -11,7 +11,9 @@ mod ui;
 
 use anyhow::Result;
 use clap::Parser;
-use crossterm::event::{self, Event, MouseEvent, MouseEventKind, MouseButton, EnableMouseCapture, DisableMouseCapture};
+use crossterm::event::{
+    self, DisableMouseCapture, EnableMouseCapture, Event, MouseButton, MouseEvent, MouseEventKind,
+};
 use std::time::Duration;
 
 fn main() -> Result<()> {
@@ -21,25 +23,20 @@ fn main() -> Result<()> {
         // Try to restore terminal
         let _ = crossterm::execute!(std::io::stdout(), DisableMouseCapture);
         let _ = crossterm::terminal::disable_raw_mode();
-        let _ = crossterm::execute!(
-            std::io::stdout(),
-            crossterm::terminal::LeaveAlternateScreen
-        );
-        
+        let _ = crossterm::execute!(std::io::stdout(), crossterm::terminal::LeaveAlternateScreen);
+
         // Call the original panic handler
         original_panic_hook(panic_info);
     }));
 
     // Parse command line arguments
     let args = cli::Args::parse();
-    
+
     // Initialize logging
     if args.debug {
-        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug"))
-            .init();
+        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug")).init();
     } else {
-        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
-            .init();
+        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
     }
 
     // Validate arguments
@@ -65,9 +62,11 @@ fn run(args: cli::Args) -> Result<()> {
         std::env::current_dir()?
     };
 
-    let repo_root = git::discover_repository(&start_path).map_err(|e| {
-        eprintln!("Failed to find git repository from: {}", start_path.display());
-        e
+    let repo_root = git::discover_repository(&start_path).inspect_err(|_e| {
+        eprintln!(
+            "Failed to find git repository from: {}",
+            start_path.display()
+        );
     })?;
 
     log::debug!("Found git repository at: {}", repo_root.display());
@@ -188,7 +187,7 @@ fn get_panel_at_position(app: &app::App, col: u16, _row: u16) -> Option<PanelTyp
     let split_ratio = app.ui_state.split_ratio;
     let terminal_width = app.ui_state.terminal_width;
     let split_point = (terminal_width as f32 * split_ratio) as u16;
-    
+
     if col < split_point {
         Some(PanelType::Commits)
     } else {
@@ -201,14 +200,14 @@ fn get_commit_at_row(app: &app::App, row: u16) -> Option<usize> {
     // Account for:
     // - Panel borders (typically 1 row at top)
     // - Title row is inside the border
-    
+
     if row <= 1 {
         return None; // Clicked on border or title
     }
-    
+
     let commit_row = row.saturating_sub(2); // Account for border and title
     let commit_index = commit_row as usize;
-    
+
     if commit_index < app.commits.len() {
         Some(commit_index)
     } else {
@@ -288,10 +287,14 @@ fn handle_mouse_click(app: &mut app::App, col: u16, row: u16) -> Result<()> {
     match get_panel_at_position(app, col, row) {
         Some(PanelType::Commits) => {
             // Switch focus to commits panel
-            if let app::AppMode::History { ref mut focused_panel, .. } = app.mode {
+            if let app::AppMode::History {
+                ref mut focused_panel,
+                ..
+            } = app.mode
+            {
                 *focused_panel = app::FocusedPanel::Commits;
             }
-            
+
             // Click-to-select commit
             if let Some(commit_index) = get_commit_at_row(app, row) {
                 if commit_index != app.selected_index {
@@ -302,7 +305,11 @@ fn handle_mouse_click(app: &mut app::App, col: u16, row: u16) -> Result<()> {
         }
         Some(PanelType::Diff) => {
             // Switch focus to diff panel
-            if let app::AppMode::History { ref mut focused_panel, .. } = app.mode {
+            if let app::AppMode::History {
+                ref mut focused_panel,
+                ..
+            } = app.mode
+            {
                 *focused_panel = app::FocusedPanel::Diff;
             }
         }

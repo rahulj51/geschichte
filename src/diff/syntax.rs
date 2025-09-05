@@ -66,7 +66,7 @@ pub fn highlight_line(line: &str, file_path: &Path) -> Vec<Span<'static>> {
 /// Detect syntax from file extension
 fn detect_syntax(file_path: &Path) -> Option<&'static SyntaxReference> {
     let extension = file_path.extension()?.to_str()?;
-    
+
     // Try to find syntax by extension first
     SYNTAX_SET
         .find_syntax_by_extension(extension)
@@ -80,17 +80,21 @@ fn detect_syntax(file_path: &Path) -> Option<&'static SyntaxReference> {
             match extension {
                 "rs" => SYNTAX_SET.find_syntax_by_name("Rust"),
                 "py" => SYNTAX_SET.find_syntax_by_name("Python"),
-                "js" | "jsx" => SYNTAX_SET.find_syntax_by_name("JavaScript")
+                "js" | "jsx" => SYNTAX_SET
+                    .find_syntax_by_name("JavaScript")
                     .or_else(|| SYNTAX_SET.find_syntax_by_name("JS")),
-                "ts" | "tsx" => SYNTAX_SET.find_syntax_by_name("TypeScript")
-                    .or_else(|| SYNTAX_SET.find_syntax_by_name("JavaScript"))  // Fallback to JS
+                "ts" | "tsx" => SYNTAX_SET
+                    .find_syntax_by_name("TypeScript")
+                    .or_else(|| SYNTAX_SET.find_syntax_by_name("JavaScript")) // Fallback to JS
                     .or_else(|| SYNTAX_SET.find_syntax_by_name("JavaScript (Babel)")),
-                "md" => SYNTAX_SET.find_syntax_by_name("Markdown")
+                "md" => SYNTAX_SET
+                    .find_syntax_by_name("Markdown")
                     .or_else(|| SYNTAX_SET.find_syntax_by_name("Markdown (Github Flavored)")),
                 "toml" => SYNTAX_SET.find_syntax_by_name("TOML"),
                 "yaml" | "yml" => SYNTAX_SET.find_syntax_by_name("YAML"),
                 "json" => SYNTAX_SET.find_syntax_by_name("JSON"),
-                "sh" | "bash" => SYNTAX_SET.find_syntax_by_name("Bash")
+                "sh" | "bash" => SYNTAX_SET
+                    .find_syntax_by_name("Bash")
                     .or_else(|| SYNTAX_SET.find_syntax_by_name("Shell Script (Bash)")),
                 "go" => SYNTAX_SET.find_syntax_by_name("Go"),
                 "cpp" | "cc" | "cxx" => SYNTAX_SET.find_syntax_by_name("C++"),

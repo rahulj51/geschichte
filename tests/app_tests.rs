@@ -63,12 +63,12 @@ mod app_tests {
     fn test_copy_mode_operations() {
         let mut app = create_test_app();
         app.commits = create_test_commits();
-        
+
         // Test starting copy mode
         app.start_copy_mode();
         assert!(app.copy_mode.is_some());
         assert!(app.copy_message.is_some());
-        
+
         // Test canceling copy mode
         app.cancel_copy_mode();
         assert!(app.copy_mode.is_none());
@@ -78,11 +78,11 @@ mod app_tests {
     #[test]
     fn test_message_timer_functionality() {
         let mut app = create_test_app();
-        
+
         // Start timer
         app.start_message_timer();
         assert!(app.message_timer.is_some());
-        
+
         // Check that timer exists and doesn't clear immediately
         app.check_message_timeout();
         assert!(app.message_timer.is_some());
@@ -92,13 +92,13 @@ mod app_tests {
     fn test_commit_info_popup() {
         let mut app = create_test_app();
         app.commits = create_test_commits();
-        
+
         // Test showing popup (should work even without git data)
         let result = app.show_commit_info_popup();
         assert!(result.is_ok());
         assert!(app.show_commit_info);
         assert!(app.commit_info_popup.is_some());
-        
+
         // Test hiding popup
         app.hide_commit_info_popup();
         assert!(!app.show_commit_info);
@@ -109,28 +109,28 @@ mod app_tests {
     fn test_commit_navigation() {
         let mut app = create_test_app();
         app.commits = create_test_commits();
-        
+
         // Test initial state
         assert_eq!(app.selected_index, 0);
-        
+
         // Test moving down (may fail due to missing git repo, but index should change)
         let old_index = app.selected_index;
         let _ = app.move_selection_down(); // Ignore result since git operations may fail in tests
         if app.selected_index == old_index + 1 {
             // Move was successful
             assert_eq!(app.selected_index, 1);
-            
+
             // Test moving up
             let _ = app.move_selection_up();
             // Index might not change if git operations fail, so just check it's valid
             assert!(app.selected_index < app.commits.len());
         }
-        
+
         // Test boundary conditions by setting index directly
         app.selected_index = 0;
         let _ = app.move_selection_up();
         assert_eq!(app.selected_index, 0); // Should stay at 0
-        
+
         app.selected_index = app.commits.len() - 1;
         let _ = app.move_selection_down();
         assert_eq!(app.selected_index, app.commits.len() - 1); // Should stay at last index
@@ -140,17 +140,17 @@ mod app_tests {
     fn test_diff_range_selection() {
         let mut app = create_test_app();
         app.commits = create_test_commits();
-        
+
         // Test marking first commit for diff
         let result = app.toggle_diff_range_selection();
         assert!(result.is_ok());
         assert_eq!(app.diff_range_start, Some(0));
-        
+
         // Test clearing diff range
         app.clear_diff_range_selection();
         assert_eq!(app.diff_range_start, None);
         assert_eq!(app.current_diff_range, None);
-        
+
         // Test checking if commit is marked
         app.diff_range_start = Some(1);
         assert!(app.is_commit_marked_for_diff(1));
@@ -160,11 +160,11 @@ mod app_tests {
     #[test]
     fn test_focus_panel_switching() {
         let mut app = create_test_app();
-        
+
         // Test initial focus (should be Commits)
         let focus = app.get_focused_panel();
         assert!(focus.is_some());
-        
+
         // Test switching focus
         app.switch_focus();
         let new_focus = app.get_focused_panel();
@@ -175,16 +175,16 @@ mod app_tests {
     #[test]
     fn test_layout_mode_effectiveness() {
         let mut app = create_test_app();
-        
+
         // Test with narrow terminal (should use Unified)
         app.ui_state.terminal_width = 80;
         app.layout_mode = LayoutMode::Auto;
         assert_eq!(app.effective_layout(), LayoutMode::Unified);
-        
+
         // Test with wide terminal (should use SideBySide)
         app.ui_state.terminal_width = 150;
         assert_eq!(app.effective_layout(), LayoutMode::SideBySide);
-        
+
         // Test explicit mode (should override auto)
         app.layout_mode = LayoutMode::Unified;
         assert_eq!(app.effective_layout(), LayoutMode::Unified);
@@ -194,12 +194,12 @@ mod app_tests {
     fn test_resize_handling() {
         let mut app = create_test_app();
         let _old_layout = app.effective_layout();
-        
+
         // Test resize
         app.handle_resize(120, 30);
         assert_eq!(app.ui_state.terminal_width, 120);
         assert_eq!(app.ui_state.terminal_height, 30);
-        
+
         // Layout might change if in Auto mode
         if app.layout_mode == LayoutMode::Auto {
             // Layout change depends on width threshold
@@ -213,7 +213,7 @@ mod app_tests {
     fn test_quit_functionality() {
         let mut app = create_test_app();
         assert!(!app.should_quit);
-        
+
         app.quit();
         assert!(app.should_quit);
     }
@@ -231,13 +231,13 @@ mod app_tests {
         let mut app = create_test_app();
         app.commits = create_test_commits();
         app.current_diff = "line 1\nlong line with many characters\nshort".to_string();
-        
+
         let max_commit_width = app.calculate_max_commit_line_width();
         assert!(max_commit_width > 0);
-        
+
         let max_diff_width = app.calculate_max_diff_line_width();
         assert!(max_diff_width > 0);
-        
+
         let diff_line_count = app.get_diff_line_count();
         assert_eq!(diff_line_count, 3); // Three lines in the diff
     }

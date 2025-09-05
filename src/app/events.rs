@@ -38,7 +38,7 @@ impl App {
                 self.switch_focus();
                 Ok(true)
             }
-            _ => Ok(false)
+            _ => Ok(false),
         }
     }
 
@@ -112,7 +112,7 @@ impl App {
                 }
                 Ok(true)
             }
-            _ => Ok(false)
+            _ => Ok(false),
         }
     }
 
@@ -174,13 +174,15 @@ impl App {
                 }
                 Ok(true)
             }
-            _ => Ok(false)
+            _ => Ok(false),
         }
     }
 
     pub fn handle_copy_keys(&mut self, key: KeyEvent) -> Result<bool> {
         // Handle copy keys in commits panel and history mode, or in commit info popup
-        if !matches!(self.get_focused_panel(), Some(FocusedPanel::Commits)) && !self.show_commit_info {
+        if !matches!(self.get_focused_panel(), Some(FocusedPanel::Commits))
+            && !self.show_commit_info
+        {
             return Ok(false);
         }
 
@@ -216,7 +218,10 @@ impl App {
             // Note: 'm' key is only handled in copy mode section below
             _ => {
                 // Handle copy mode targets
-                if matches!(self.copy_mode, Some(crate::copy::CopyMode::WaitingForTarget)) {
+                if matches!(
+                    self.copy_mode,
+                    Some(crate::copy::CopyMode::WaitingForTarget)
+                ) {
                     match (key.code, key.modifiers) {
                         (KeyCode::Char('s'), KeyModifiers::NONE) => {
                             self.copy_commit_sha(false)?;
@@ -242,12 +247,30 @@ impl App {
                             self.copy_github_url()?;
                             Ok(true)
                         }
-                        _ => Ok(false)
+                        _ => Ok(false),
                     }
                 } else {
                     Ok(false)
                 }
             }
+        }
+    }
+
+    pub fn handle_change_navigation_keys(&mut self, key: KeyEvent) -> Result<bool> {
+        match (key.code, key.modifiers) {
+            (KeyCode::Char('n'), KeyModifiers::NONE) => {
+                if self.copy_mode.is_some() {
+                    // Don't conflict with copy mode
+                    return Ok(false);
+                }
+                self.navigate_to_next_change()?;
+                Ok(true)
+            }
+            (KeyCode::Char('N'), KeyModifiers::SHIFT) => {
+                self.navigate_to_previous_change()?;
+                Ok(true)
+            }
+            _ => Ok(false),
         }
     }
 }

@@ -1,9 +1,9 @@
 use crate::error::{GeschichteError, Result as GeschichteResult};
+use anyhow::Result;
+use chrono::{DateTime, Utc};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::SystemTime;
-use anyhow::Result;
-use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone)]
 pub struct GitFile {
@@ -49,24 +49,29 @@ impl FileStatus {
 /// Get all files in the repository (tracked + untracked, excluding ignored)
 pub fn get_git_files(repo_root: &Path) -> Result<Vec<GitFile>> {
     let mut files = Vec::new();
-    
+
     // Get all files: tracked + untracked (excluding ignored)
     let output = Command::new("git")
-        .args(["ls-files", "--cached", "--others", "--exclude-standard", "-z"])
+        .args([
+            "ls-files",
+            "--cached",
+            "--others",
+            "--exclude-standard",
+            "-z",
+        ])
         .current_dir(repo_root)
         .output()?;
 
     if !output.status.success() {
-        return Err(anyhow::anyhow!("Failed to list git files: {}", 
-            String::from_utf8_lossy(&output.stderr)));
+        return Err(anyhow::anyhow!(
+            "Failed to list git files: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
     }
 
     // Parse null-terminated file list
     let file_list = String::from_utf8_lossy(&output.stdout);
-    let file_paths: Vec<&str> = file_list
-        .split('\0')
-        .filter(|s| !s.is_empty())
-        .collect();
+    let file_paths: Vec<&str> = file_list.split('\0').filter(|s| !s.is_empty()).collect();
 
     // Get file status for all files
     let status_map = get_file_status_map(repo_root)?;
@@ -74,12 +79,13 @@ pub fn get_git_files(repo_root: &Path) -> Result<Vec<GitFile>> {
     for file_path in file_paths {
         let path = repo_root.join(file_path);
         let display_path = file_path.to_string();
-        
+
         // Get file metadata
         let (modified, size) = get_file_metadata(&path);
-        
+
         // Determine file status
-        let status = status_map.get(file_path)
+        let status = status_map
+            .get(file_path)
             .cloned()
             .unwrap_or(FileStatus::Clean);
 

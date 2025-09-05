@@ -1,5 +1,7 @@
 use crate::app::{App, FocusedPanel};
-use crate::ui::common::utils::{apply_horizontal_scroll, create_border_style, create_commits_title};
+use crate::ui::common::utils::{
+    apply_horizontal_scroll, create_border_style, create_commits_title,
+};
 use ratatui::{
     layout::Rect,
     style::{Color, Modifier, Style},
@@ -15,12 +17,7 @@ pub enum CommitsPanelLayout {
 }
 
 /// Draw commits panel that works for both unified and side-by-side layouts
-pub fn draw_commits_panel(
-    frame: &mut Frame,
-    app: &App,
-    area: Rect,
-    layout: CommitsPanelLayout,
-) {
+pub fn draw_commits_panel(frame: &mut Frame, app: &App, area: Rect, layout: CommitsPanelLayout) {
     let title = create_commits_title(
         app.commits.len(),
         app.loading,
@@ -41,11 +38,11 @@ pub fn draw_commits_panel(
         } else {
             "No commits found for this file"
         };
-        
+
         let paragraph = Paragraph::new(message)
             .block(block)
             .style(Style::default().fg(Color::Gray));
-        
+
         frame.render_widget(paragraph, area);
         return;
     }
@@ -58,19 +55,17 @@ pub fn draw_commits_panel(
     let mut list_state = ListState::default();
     list_state.select(Some(app.selected_index));
 
-    let list = List::new(items)
-        .block(block)
-        .highlight_style(
-            Style::default()
-                .bg(Color::DarkGray)
-                .add_modifier(Modifier::BOLD),
-        );
+    let list = List::new(items).block(block).highlight_style(
+        Style::default()
+            .bg(Color::DarkGray)
+            .add_modifier(Modifier::BOLD),
+    );
 
     frame.render_stateful_widget(list, area, &mut list_state);
 }
 
 /// Create commit items for vertical layout (unified view)
-fn create_vertical_commit_items(app: &App, area: Rect) -> Vec<ListItem> {
+fn create_vertical_commit_items(app: &App, area: Rect) -> Vec<ListItem<'_>> {
     app.commits
         .iter()
         .enumerate()
@@ -84,20 +79,32 @@ fn create_vertical_commit_items(app: &App, area: Rect) -> Vec<ListItem> {
             let line = if commit.is_working_directory {
                 // Special styling for working directory
                 Line::from(vec![
-                    Span::styled(marker.to_string(), Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        marker.to_string(),
+                        Style::default()
+                            .fg(Color::Green)
+                            .add_modifier(Modifier::BOLD),
+                    ),
                     Span::styled("Working".to_string(), Style::default().fg(Color::Magenta)),
                     Span::raw(" "),
                     Span::styled("Dir".to_string(), Style::default().fg(Color::Magenta)),
                     Span::raw(" "),
                     Span::styled(
                         commit.subject.clone(),
-                        Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)
+                        Style::default()
+                            .fg(Color::Green)
+                            .add_modifier(Modifier::BOLD),
                     ),
                 ])
             } else {
                 // Regular commit styling
                 Line::from(vec![
-                    Span::styled(marker.to_string(), Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        marker.to_string(),
+                        Style::default()
+                            .fg(Color::Green)
+                            .add_modifier(Modifier::BOLD),
+                    ),
                     Span::styled(commit.date.clone(), Style::default().fg(Color::Yellow)),
                     Span::raw(" "),
                     Span::styled(commit.short_hash.clone(), Style::default().fg(Color::Cyan)),
@@ -105,12 +112,12 @@ fn create_vertical_commit_items(app: &App, area: Rect) -> Vec<ListItem> {
                     Span::raw(commit.subject.clone()),
                 ])
             };
-            
+
             // Apply horizontal scrolling to commit line
             let scrolled_line = apply_horizontal_scroll(
-                line, 
-                app.ui_state.commit_horizontal_scroll, 
-                area.width.saturating_sub(2) as usize
+                line,
+                app.ui_state.commit_horizontal_scroll,
+                area.width.saturating_sub(2) as usize,
             );
             ListItem::new(scrolled_line)
         })
@@ -118,7 +125,7 @@ fn create_vertical_commit_items(app: &App, area: Rect) -> Vec<ListItem> {
 }
 
 /// Create commit items for horizontal layout (side-by-side view)
-fn create_horizontal_commit_items(app: &App) -> Vec<ListItem> {
+fn create_horizontal_commit_items(app: &App) -> Vec<ListItem<'_>> {
     app.commits
         .iter()
         .enumerate()
@@ -132,14 +139,15 @@ fn create_horizontal_commit_items(app: &App) -> Vec<ListItem> {
             let line = if commit.is_working_directory {
                 format!("{}[Working Directory] {}", marker, commit.subject)
             } else {
-                format!("{}{} {} {}",
+                format!(
+                    "{}{} {} {}",
                     marker,
                     &commit.short_hash,
                     &commit.date[..10.min(commit.date.len())], // Take first 10 chars (date part)
                     commit.subject
                 )
             };
-            
+
             let style = if index == app.selected_index {
                 Style::default().bg(Color::Blue).fg(Color::White)
             } else if app.is_commit_marked_for_diff(index) {
@@ -147,7 +155,7 @@ fn create_horizontal_commit_items(app: &App) -> Vec<ListItem> {
             } else {
                 Style::default()
             };
-            
+
             ListItem::new(line).style(style)
         })
         .collect()

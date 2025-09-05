@@ -64,7 +64,7 @@ impl Args {
 
         Ok(())
     }
-    
+
     /// Get the effective context lines, considering the full-file flag
     pub fn effective_context_lines(&self) -> u32 {
         if self.full_file {

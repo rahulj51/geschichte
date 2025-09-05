@@ -12,7 +12,7 @@ pub fn fetch_diff(
 ) -> Result<String> {
     let mut cmd = Command::new("git");
     cmd.current_dir(repo_root);
-    
+
     if let Some(parent) = parent_hash {
         // Normal commit with parent
         cmd.arg("diff")
@@ -31,12 +31,14 @@ pub fn fetch_diff(
             .arg("--")
             .arg(file_path);
     }
-    
-    let output = cmd.output().map_err(|e| GeschichteError::GitCommandFailed {
-        command: format!("git diff/show for {}", commit_hash),
-        output: e.to_string(),
-    })?;
-    
+
+    let output = cmd
+        .output()
+        .map_err(|e| GeschichteError::GitCommandFailed {
+            command: format!("git diff/show for {}", commit_hash),
+            output: e.to_string(),
+        })?;
+
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         // It's okay if the file doesn't exist in one of the commits
@@ -48,7 +50,7 @@ pub fn fetch_diff(
             output: stderr.to_string(),
         });
     }
-    
+
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
@@ -68,12 +70,14 @@ pub fn get_diff_between_commits(
         .arg(format!("{}..{}", start_commit_hash, end_commit_hash))
         .arg("--")
         .arg(file_path);
-    
-    let output = cmd.output().map_err(|e| GeschichteError::GitCommandFailed {
-        command: format!("git diff {}..{}", start_commit_hash, end_commit_hash),
-        output: e.to_string(),
-    })?;
-    
+
+    let output = cmd
+        .output()
+        .map_err(|e| GeschichteError::GitCommandFailed {
+            command: format!("git diff {}..{}", start_commit_hash, end_commit_hash),
+            output: e.to_string(),
+        })?;
+
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         // It's okay if the file doesn't exist in one of the commits
@@ -85,12 +89,14 @@ pub fn get_diff_between_commits(
             output: stderr.to_string(),
         });
     }
-    
+
     let diff_output = String::from_utf8_lossy(&output.stdout).to_string();
     if diff_output.trim().is_empty() {
-        return Ok(String::from("No differences between the selected commits\n"));
+        return Ok(String::from(
+            "No differences between the selected commits\n",
+        ));
     }
-    
+
     Ok(diff_output)
 }
 
@@ -101,7 +107,6 @@ pub fn resolve_path_at_commit(
     commit_hash: &str,
     file_path: &Path,
 ) -> Result<PathBuf> {
-    
     // Try to find the file at this commit
     let output = Command::new("git")
         .current_dir(repo_root)
@@ -115,14 +120,14 @@ pub fn resolve_path_at_commit(
             command: format!("git ls-tree {} {}", commit_hash, file_path.display()),
             output: e.to_string(),
         })?;
-    
+
     if output.status.success() && !output.stdout.is_empty() {
         let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
         if !path_str.is_empty() {
             return Ok(PathBuf::from(path_str));
         }
     }
-    
+
     // File might have been renamed, return original path as fallback
     Ok(file_path.to_path_buf())
 }

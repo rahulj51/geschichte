@@ -43,7 +43,11 @@ impl CommitCopier {
         Self { clipboard }
     }
 
-    pub fn copy_commit_info(&mut self, commit: &Commit, format: CopyFormat) -> Result<String, String> {
+    pub fn copy_commit_info(
+        &mut self,
+        commit: &Commit,
+        format: CopyFormat,
+    ) -> Result<String, String> {
         let content = match format {
             CopyFormat::FullSha => commit.hash.clone(),
             CopyFormat::ShortSha => commit.short_hash.clone(),
@@ -68,7 +72,9 @@ impl CommitCopier {
         };
 
         if let Some(ref mut clipboard) = self.clipboard {
-            clipboard.set_text(&content).map_err(|e| format!("Failed to copy to clipboard: {}", e))?;
+            clipboard
+                .set_text(&content)
+                .map_err(|e| format!("Failed to copy to clipboard: {}", e))?;
             Ok(content)
         } else {
             Err("Clipboard not available".to_string())

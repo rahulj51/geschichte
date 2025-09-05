@@ -4,10 +4,7 @@ use std::process::Command;
 
 /// Executes a git command and returns the output
 #[allow(dead_code)]
-pub fn run_git_command(
-    args: &[&str],
-    repo_path: &Path,
-) -> Result<String> {
+pub fn run_git_command(args: &[&str], repo_path: &Path) -> Result<String> {
     let output = Command::new("git")
         .args(args)
         .current_dir(repo_path)

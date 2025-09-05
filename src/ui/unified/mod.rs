@@ -2,8 +2,8 @@ use crate::app::{App, FocusedPanel};
 use crate::diff::HighlightedDiff;
 use crate::ui::common::{
     commits::{draw_commits_panel, CommitsPanelLayout},
-    utils::{apply_horizontal_scroll, create_border_style, create_diff_title},
     draw_status_bar,
+    utils::{apply_horizontal_scroll, create_border_style, create_diff_title},
 };
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
@@ -22,17 +22,19 @@ pub fn draw(frame: &mut Frame, app: &App) {
 
     let left_percent = (app.ui_state.split_ratio * 100.0) as u16;
     let right_percent = 100 - left_percent;
-    
+
     let main_chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(left_percent), Constraint::Percentage(right_percent)])
+        .constraints([
+            Constraint::Percentage(left_percent),
+            Constraint::Percentage(right_percent),
+        ])
         .split(chunks[0]);
 
     draw_commits_panel(frame, app, main_chunks[0], CommitsPanelLayout::Vertical);
     draw_diff_panel(frame, app, main_chunks[1]);
     draw_status_bar(frame, app, chunks[1]);
 }
-
 
 fn draw_diff_panel(frame: &mut Frame, app: &App, area: Rect) {
     let title = create_diff_title(
@@ -59,21 +61,21 @@ fn draw_diff_panel(frame: &mut Frame, app: &App, area: Rect) {
         } else {
             "No diff available"
         };
-        
+
         let paragraph = Paragraph::new(message)
             .block(block)
             .style(Style::default().fg(Color::Gray));
-        
+
         frame.render_widget(paragraph, area);
         return;
     }
 
     // Create a highlighted diff with syntax highlighting based on the file path
     let file_path = app.get_file_path().map(|p| p.as_path());
-    
+
     let highlighted_diff = HighlightedDiff::new(&app.current_diff, file_path);
     let all_styled_lines = highlighted_diff.to_styled_lines();
-    
+
     // Apply both vertical AND horizontal scrolling with cursor highlighting
     let styled_lines: Vec<Line> = all_styled_lines
         .into_iter()
@@ -88,7 +90,13 @@ fn draw_diff_panel(frame: &mut Frame, app: &App, area: Rect) {
         })
         .skip(app.ui_state.diff_scroll) // Vertical scroll
         .take(area.height.saturating_sub(2) as usize) // Account for borders
-        .map(|line| apply_horizontal_scroll(line, app.ui_state.diff_horizontal_scroll, area.width as usize))
+        .map(|line| {
+            apply_horizontal_scroll(
+                line,
+                app.ui_state.diff_horizontal_scroll,
+                area.width as usize,
+            )
+        })
         .collect();
 
     let paragraph = Paragraph::new(styled_lines).block(block);
@@ -97,7 +105,8 @@ fn draw_diff_panel(frame: &mut Frame, app: &App, area: Rect) {
 
 /// Apply cursor highlighting to a line by adding background color to all spans
 fn apply_cursor_highlight(line: Line<'static>) -> Line<'static> {
-    let highlighted_spans: Vec<Span> = line.spans
+    let highlighted_spans: Vec<Span> = line
+        .spans
         .into_iter()
         .map(|span| {
             let mut style = span.style;
@@ -106,6 +115,6 @@ fn apply_cursor_highlight(line: Line<'static>) -> Line<'static> {
             Span::styled(span.content, style)
         })
         .collect();
-    
+
     Line::from(highlighted_spans)
 }

@@ -22,7 +22,7 @@ mod copy_tests {
     fn test_copy_full_sha() {
         let mut copier = CommitCopier::new();
         let commit = create_test_commit();
-        
+
         let result = copier.copy_commit_info(&commit, CopyFormat::FullSha);
         // Note: This might fail in headless environments without clipboard access
         match result {
@@ -38,7 +38,7 @@ mod copy_tests {
     fn test_copy_short_sha() {
         let mut copier = CommitCopier::new();
         let commit = create_test_commit();
-        
+
         let result = copier.copy_commit_info(&commit, CopyFormat::ShortSha);
         match result {
             Ok(content) => assert_eq!(content, "abc123d"),
@@ -50,12 +50,15 @@ mod copy_tests {
     fn test_copy_message_with_body() {
         let mut copier = CommitCopier::new();
         let commit = create_test_commit();
-        
+
         let result = copier.copy_commit_info(&commit, CopyFormat::Message);
         match result {
             Ok(content) => {
-                assert_eq!(content, "Add new feature\n\nThis is the commit body\nwith multiple lines");
-            },
+                assert_eq!(
+                    content,
+                    "Add new feature\n\nThis is the commit body\nwith multiple lines"
+                );
+            }
             Err(_) => println!("Clipboard not available for testing"),
         }
     }
@@ -65,7 +68,7 @@ mod copy_tests {
         let mut copier = CommitCopier::new();
         let mut commit = create_test_commit();
         commit.body = String::new();
-        
+
         let result = copier.copy_commit_info(&commit, CopyFormat::Message);
         match result {
             Ok(content) => assert_eq!(content, "Add new feature"),
@@ -77,7 +80,7 @@ mod copy_tests {
     fn test_copy_author() {
         let mut copier = CommitCopier::new();
         let commit = create_test_commit();
-        
+
         let result = copier.copy_commit_info(&commit, CopyFormat::Author);
         match result {
             Ok(content) => assert_eq!(content, "John Doe <john@example.com>"),
@@ -89,7 +92,7 @@ mod copy_tests {
     fn test_copy_date() {
         let mut copier = CommitCopier::new();
         let commit = create_test_commit();
-        
+
         let result = copier.copy_commit_info(&commit, CopyFormat::Date);
         match result {
             Ok(content) => assert_eq!(content, "2023-01-15 10:30:00"),
@@ -101,7 +104,7 @@ mod copy_tests {
     fn test_copy_github_url_default() {
         let mut copier = CommitCopier::new();
         let commit = create_test_commit();
-        
+
         let result = copier.copy_commit_info(&commit, CopyFormat::GitHubUrl);
         match result {
             Ok(content) => assert_eq!(content, "https://github.com/repo/commit/abc123def456"),

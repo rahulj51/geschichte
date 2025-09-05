@@ -12,27 +12,28 @@ pub fn fetch_commit_history(
     first_parent: bool,
 ) -> Result<Vec<Commit>> {
     let mut cmd = Command::new("git");
-    cmd.current_dir(repo_root)
-        .arg("log");
-    
+    cmd.current_dir(repo_root).arg("log");
+
     if follow_renames {
         cmd.arg("--follow");
     }
-    
+
     if first_parent {
         cmd.arg("--first-parent");
     }
-    
+
     cmd.arg("--format=%H%x00%h%x00%ad%x00%an%x00%ae%x00%cn%x00%ce%x00%cd%x00%s%x00%B")
         .arg("--date=format:%Y-%m-%d %H:%M:%S")
         .arg("--")
         .arg(file_path);
-    
-    let output = cmd.output().map_err(|e| GeschichteError::GitCommandFailed {
-        command: format!("git log --follow {}", file_path.display()),
-        output: e.to_string(),
-    })?;
-    
+
+    let output = cmd
+        .output()
+        .map_err(|e| GeschichteError::GitCommandFailed {
+            command: format!("git log --follow {}", file_path.display()),
+            output: e.to_string(),
+        })?;
+
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         return Err(GeschichteError::GitCommandFailed {
@@ -40,18 +41,18 @@ pub fn fetch_commit_history(
             output: stderr.to_string(),
         });
     }
-    
+
     let stdout = String::from_utf8_lossy(&output.stdout);
     let mut commits = Vec::new();
-    
+
     for line in stdout.lines() {
         if line.is_empty() {
             continue;
         }
-        
+
         let parts: Vec<&str> = line.split('\0').collect();
         if parts.len() >= 10 {
-            // New enhanced format: hash, short_hash, author_date, author_name, author_email, 
+            // New enhanced format: hash, short_hash, author_date, author_name, author_email,
             // committer_name, committer_email, committer_date, subject, body
             commits.push(Commit::new_enhanced(
                 parts[0].to_string(), // hash
@@ -76,17 +77,14 @@ pub fn fetch_commit_history(
             ));
         }
     }
-    
+
     Ok(commits)
 }
 
 /// Builds a map of commit hashes to file paths for rename tracking
-pub fn build_rename_map(
-    repo_root: &Path,
-    file_path: &Path,
-) -> Result<HashMap<String, PathBuf>> {
+pub fn build_rename_map(repo_root: &Path, file_path: &Path) -> Result<HashMap<String, PathBuf>> {
     let mut rename_map = HashMap::new();
-    
+
     let output = Command::new("git")
         .current_dir(repo_root)
         .arg("log")
@@ -100,20 +98,20 @@ pub fn build_rename_map(
             command: format!("git log --follow --name-status {}", file_path.display()),
             output: e.to_string(),
         })?;
-    
+
     if !output.status.success() {
         return Ok(rename_map); // Return empty map on failure
     }
-    
+
     let stdout = String::from_utf8_lossy(&output.stdout);
     let mut current_hash = String::new();
     let mut current_path = file_path.to_path_buf();
-    
+
     for line in stdout.lines() {
         if line.is_empty() {
             continue;
         }
-        
+
         // Check if this is a commit hash (40 chars)
         if line.len() == 40 && line.chars().all(|c| c.is_ascii_hexdigit()) {
             current_hash = line.to_string();
@@ -125,7 +123,7 @@ pub fn build_rename_map(
                 let old_path = PathBuf::from(parts[1]);
                 let new_path = PathBuf::from(parts[2]);
                 current_path = old_path; // Track the old name for previous commits
-                
+
                 // Update the current commit's path
                 if !current_hash.is_empty() {
                     rename_map.insert(current_hash.clone(), new_path);
@@ -142,19 +140,20 @@ pub fn build_rename_map(
             }
         }
     }
-    
+
     Ok(rename_map)
 }
 
 /// Fetches additional metadata for a commit (refs, stats, etc.)
 pub fn fetch_commit_refs(repo_root: &Path, commit_hash: &str) -> Result<Vec<String>> {
     let mut refs = Vec::new();
-    
+
     // Get branches containing this commit
     if let Ok(output) = Command::new("git")
         .args(["branch", "--contains", commit_hash])
         .current_dir(repo_root)
-        .output() {
+        .output()
+    {
         if output.status.success() {
             let stdout = String::from_utf8_lossy(&output.stdout);
             for line in stdout.lines() {
@@ -165,12 +164,13 @@ pub fn fetch_commit_refs(repo_root: &Path, commit_hash: &str) -> Result<Vec<Stri
             }
         }
     }
-    
+
     // Get tags at this commit
     if let Ok(output) = Command::new("git")
         .args(["tag", "--points-at", commit_hash])
         .current_dir(repo_root)
-        .output() {
+        .output()
+    {
         if output.status.success() {
             let stdout = String::from_utf8_lossy(&output.stdout);
             for line in stdout.lines() {
@@ -181,12 +181,15 @@ pub fn fetch_commit_refs(repo_root: &Path, commit_hash: &str) -> Result<Vec<Stri
             }
         }
     }
-    
+
     Ok(refs)
 }
 
 /// Fetches commit statistics (files changed, insertions, deletions)
-pub fn fetch_commit_stats(repo_root: &Path, commit_hash: &str) -> Result<Option<crate::commit::CommitStats>> {
+pub fn fetch_commit_stats(
+    repo_root: &Path,
+    commit_hash: &str,
+) -> Result<Option<crate::commit::CommitStats>> {
     let output = Command::new("git")
         .args(["show", "--stat", "--format=", commit_hash])
         .current_dir(repo_root)
@@ -195,21 +198,21 @@ pub fn fetch_commit_stats(repo_root: &Path, commit_hash: &str) -> Result<Option<
             command: format!("git show --stat {}", commit_hash),
             output: e.to_string(),
         })?;
-    
+
     if !output.status.success() {
         return Ok(None);
     }
-    
+
     let stdout = String::from_utf8_lossy(&output.stdout);
     let lines: Vec<&str> = stdout.lines().collect();
-    
+
     // Look for the summary line like " 3 files changed, 45 insertions(+), 12 deletions(-)"
     for line in lines.iter().rev() {
         if line.contains("file") && (line.contains("insertion") || line.contains("deletion")) {
             return Ok(parse_stat_line(line));
         }
     }
-    
+
     Ok(None)
 }
 
@@ -217,7 +220,7 @@ fn parse_stat_line(line: &str) -> Option<crate::commit::CommitStats> {
     let mut files_changed = 0;
     let mut insertions = 0;
     let mut deletions = 0;
-    
+
     // Parse patterns like "3 files changed, 45 insertions(+), 12 deletions(-)"
     for part in line.split(',') {
         let part = part.trim();
@@ -235,7 +238,7 @@ fn parse_stat_line(line: &str) -> Option<crate::commit::CommitStats> {
             }
         }
     }
-    
+
     Some(crate::commit::CommitStats {
         files_changed,
         insertions,
@@ -256,7 +259,7 @@ pub fn detect_pr_info(commit: &crate::commit::Commit) -> Option<crate::commit::P
             });
         }
     }
-    
+
     // Method 2: Parse commit message for other PR patterns
     if let Some(pr_num) = extract_pr_number(&commit.subject) {
         return Some(crate::commit::PullRequestInfo {
@@ -266,7 +269,7 @@ pub fn detect_pr_info(commit: &crate::commit::Commit) -> Option<crate::commit::P
             status: crate::commit::PRStatus::Unknown,
         });
     }
-    
+
     None
 }
 
@@ -321,14 +324,14 @@ pub fn get_commit_parents(repo_root: &Path, commit_hash: &str) -> Result<Vec<Str
             command: format!("git rev-list --parents -n1 {}", commit_hash),
             output: e.to_string(),
         })?;
-    
+
     if !output.status.success() {
         return Ok(vec![]);
     }
-    
+
     let stdout = String::from_utf8_lossy(&output.stdout);
     let parts: Vec<&str> = stdout.split_whitespace().collect();
-    
+
     // First part is the commit itself, rest are parents
     if parts.len() > 1 {
         Ok(parts[1..].iter().map(|s| s.to_string()).collect())

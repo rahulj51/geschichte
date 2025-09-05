@@ -1,2 +1,2 @@
-mod git_integration;
 mod file_picker_integration;
+mod git_integration;

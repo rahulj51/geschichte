@@ -27,7 +27,7 @@ impl UIState {
     pub fn handle_resize(&mut self, width: u16, height: u16) {
         self.terminal_height = height;
         self.terminal_width = width;
-        
+
         // Recalculate scroll bounds if window got smaller
         if self.diff_horizontal_scroll > width as usize {
             self.diff_horizontal_scroll = (width as usize).saturating_sub(10);
@@ -77,7 +77,7 @@ impl UIState {
         // Account for viewport height to prevent scrolling too far
         let viewport_height = self.get_visible_lines(&crate::cli::LayoutMode::Unified);
         let max_scroll = max_lines.saturating_sub(viewport_height);
-        
+
         if self.diff_scroll < max_scroll {
             self.diff_scroll += 1;
         }
@@ -92,7 +92,7 @@ impl UIState {
         let page_size = self.get_page_scroll_size();
         let viewport_height = self.get_visible_lines(&crate::cli::LayoutMode::Unified);
         let max_scroll = max_lines.saturating_sub(viewport_height);
-        
+
         // Ensure we don't scroll past the content
         self.diff_scroll = (self.diff_scroll + page_size).min(max_scroll);
     }
@@ -100,23 +100,23 @@ impl UIState {
     pub fn scroll_diff_left(&mut self) {
         self.diff_horizontal_scroll = self.diff_horizontal_scroll.saturating_sub(4);
     }
-    
+
     pub fn scroll_diff_right(&mut self, max_width: usize) {
         if self.diff_horizontal_scroll + 4 < max_width {
             self.diff_horizontal_scroll += 4;
         }
     }
-    
+
     pub fn scroll_commit_left(&mut self) {
         self.commit_horizontal_scroll = self.commit_horizontal_scroll.saturating_sub(4);
     }
-    
+
     pub fn scroll_commit_right(&mut self, max_width: usize) {
         if self.commit_horizontal_scroll + 4 < max_width {
             self.commit_horizontal_scroll += 4;
         }
     }
-    
+
     // Cursor navigation methods
     pub fn move_cursor_up(&mut self, layout_mode: &crate::cli::LayoutMode) {
         if self.diff_cursor_line > 0 {
@@ -124,18 +124,18 @@ impl UIState {
             self.ensure_cursor_visible(layout_mode);
         }
     }
-    
+
     pub fn move_cursor_down(&mut self, max_lines: usize, layout_mode: &crate::cli::LayoutMode) {
         if max_lines > 0 && self.diff_cursor_line < max_lines - 1 {
             self.diff_cursor_line += 1;
             self.ensure_cursor_visible(layout_mode);
         }
     }
-    
+
     pub fn get_visible_lines(&self, layout_mode: &crate::cli::LayoutMode) -> usize {
         // Calculate how many lines are visible in the diff area
         let visible_height = self.terminal_height.saturating_sub(1) as usize; // Account for status bar
-        
+
         match layout_mode {
             crate::cli::LayoutMode::SideBySide => {
                 // In side-by-side mode, diff takes 70% of height, minus borders
@@ -149,17 +149,19 @@ impl UIState {
             }
         }
     }
-    
-    fn ensure_cursor_visible(&mut self, layout_mode: &crate::cli::LayoutMode) {
+
+    pub fn ensure_cursor_visible(&mut self, layout_mode: &crate::cli::LayoutMode) {
         let visible_lines = self.get_visible_lines(layout_mode);
-        
+
         // If cursor is above the current scroll, scroll up
         if self.diff_cursor_line < self.diff_scroll {
             self.diff_scroll = self.diff_cursor_line;
         }
         // If cursor is below the visible area, scroll down
         else if self.diff_cursor_line >= self.diff_scroll + visible_lines {
-            self.diff_scroll = self.diff_cursor_line.saturating_sub(visible_lines.saturating_sub(1));
+            self.diff_scroll = self
+                .diff_cursor_line
+                .saturating_sub(visible_lines.saturating_sub(1));
         }
     }
 }

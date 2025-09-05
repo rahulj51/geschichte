@@ -21,8 +21,8 @@ exclude = [
     "test_scripts"
 ]
 
-# The minimum supported Rust version
-rust-version = "1.70"
+# The minimum supported Rust version (updated due to transitive dependency requirements)
+rust-version = "1.80"
 
 [dependencies]
 # Core dependencies
@@ -74,3 +74,6 @@ strip = true
 [profile.dev]
 opt-level = 0
 debug = true
+
+# Note: Some transitive dependencies (like moxcms 0.7.5+) require newer Rust features
+# If you encounter edition2024 errors, update Rust: rustup update

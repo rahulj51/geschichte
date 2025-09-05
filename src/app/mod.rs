@@ -32,7 +32,7 @@ pub enum AppMode {
 
 #[derive(Debug, Clone)]
 pub enum FilePickerContext {
-    Initial, // Started with no file argument
+    Initial,                               // Started with no file argument
     SwitchFile { previous_file: PathBuf }, // Switching from an existing file
 }
 
@@ -42,10 +42,10 @@ pub struct App {
     pub context_lines: u32,
     pub follow_renames: bool,
     pub first_parent: bool,
-    
+
     // Application mode
     pub mode: AppMode,
-    
+
     // History mode data (only valid when in History mode)
     pub commits: Vec<Commit>,
     pub selected_index: usize,
@@ -53,28 +53,32 @@ pub struct App {
     pub current_diff: String,
     pub current_side_by_side_diff: Option<SideBySideDiff>,
     pub diff_cache: DiffCache,
-    
+
     // UI state (moved to separate struct)
     pub ui_state: UIState,
-    
+
     // Core app state
     pub layout_mode: LayoutMode,
     pub loading: bool,
     pub error_message: Option<String>,
-    
+
     // Diff range selection
     pub diff_range_start: Option<usize>,
     pub current_diff_range: Option<(usize, usize)>, // (older_index, newer_index)
-    
+
     // Copy functionality
     pub copy_mode: Option<CopyMode>,
     pub copier: CommitCopier,
     pub copy_message: Option<String>,
-    
+
     // Commit info popup
     pub show_commit_info: bool,
     pub commit_info_popup: Option<crate::ui::commit_info::CommitInfoPopup>,
-    
+
+    // Change navigation cache
+    pub current_changes: Vec<usize>, // Line indices of all changes
+    pub current_change_index: Option<usize>, // Index into current_changes array
+
     // Message timing
     pub message_timer: Option<std::time::Instant>,
 }
@@ -90,7 +94,7 @@ impl App {
                 } else {
                     LayoutMode::Unified
                 }
-            },
+            }
             other => other,
         }
     }
@@ -103,10 +107,10 @@ impl App {
         layout_mode: LayoutMode,
     ) -> Result<Self> {
         use crate::git::files::get_git_files;
-        
+
         let files = get_git_files(&repo_root)?;
         let file_picker_state = FilePickerState::new(files);
-        
+
         Ok(Self {
             repo_root,
             should_quit: false,
@@ -134,6 +138,8 @@ impl App {
             copy_message: None,
             show_commit_info: false,
             commit_info_popup: None,
+            current_changes: Vec::new(),
+            current_change_index: None,
             message_timer: None,
         })
     }
@@ -173,6 +179,8 @@ impl App {
             copy_message: None,
             show_commit_info: false,
             commit_info_popup: None,
+            current_changes: Vec::new(),
+            current_change_index: None,
             message_timer: None,
         }
     }
@@ -182,7 +190,7 @@ impl App {
             file_path,
             focused_panel: FocusedPanel::Commits,
         };
-        
+
         // Clear existing data
         self.commits.clear();
         self.selected_index = 0;
@@ -191,7 +199,8 @@ impl App {
         self.current_side_by_side_diff = None;
         self.ui_state.reset_diff_scroll();
         self.diff_cache.clear();
-        
+        self.clear_change_cache();
+
         // Load git data for the new file
         self.load_git_data()
     }
@@ -220,9 +229,10 @@ impl App {
     pub fn return_to_previous_file(&mut self) -> Result<()> {
         // Only works if we're in file picker with SwitchFile context
         let previous_file = match &self.mode {
-            AppMode::FilePicker { context: FilePickerContext::SwitchFile { previous_file }, .. } => {
-                previous_file.clone()
-            }
+            AppMode::FilePicker {
+                context: FilePickerContext::SwitchFile { previous_file },
+                ..
+            } => previous_file.clone(),
             _ => return Ok(()), // No-op if not in the right context
         };
 
@@ -249,19 +259,19 @@ impl App {
         )?;
 
         // Check for working directory changes and prepend if found
-        let wd_status = crate::git::working::check_working_directory_status(
-            &self.repo_root,
-            &file_path,
-        )?;
+        let wd_status =
+            crate::git::working::check_working_directory_status(&self.repo_root, &file_path)?;
 
         if wd_status != crate::git::working::WorkingDirectoryStatus::Clean {
             let status_text = match wd_status {
                 crate::git::working::WorkingDirectoryStatus::Modified => "Modified".to_string(),
                 crate::git::working::WorkingDirectoryStatus::Staged => "Staged".to_string(),
-                crate::git::working::WorkingDirectoryStatus::ModifiedAndStaged => "Modified + Staged".to_string(),
+                crate::git::working::WorkingDirectoryStatus::ModifiedAndStaged => {
+                    "Modified + Staged".to_string()
+                }
                 crate::git::working::WorkingDirectoryStatus::Clean => unreachable!(),
             };
-            
+
             let wd_commit = crate::commit::Commit::new_working_directory(status_text);
             commits.insert(0, wd_commit);
         }
@@ -270,10 +280,7 @@ impl App {
 
         // Build rename map
         if self.follow_renames {
-            self.rename_map = crate::git::history::build_rename_map(
-                &self.repo_root,
-                &file_path,
-            )?;
+            self.rename_map = crate::git::history::build_rename_map(&self.repo_root, &file_path)?;
         }
 
         // Load initial diff if we have commits
@@ -297,11 +304,12 @@ impl App {
         };
 
         let commit = &self.commits[self.selected_index];
-        
+
         // Check cache first
         if let Some(cached_diff) = self.diff_cache.get(&commit.hash).cloned() {
             self.current_diff = cached_diff.clone();
             self.update_side_by_side_diff(&cached_diff);
+            self.update_change_cache();
             self.reset_diff_scroll();
             return Ok(());
         }
@@ -319,7 +327,8 @@ impl App {
             let parent_hash = parents.first().map(|s| s.as_str());
 
             // Resolve file path at this commit
-            let commit_file_path = self.rename_map
+            let commit_file_path = self
+                .rename_map
                 .get(&commit.hash)
                 .cloned()
                 .unwrap_or_else(|| file_path.clone());
@@ -337,7 +346,8 @@ impl App {
         self.diff_cache.put(commit.hash.clone(), diff.clone());
         self.current_diff = diff.clone();
         self.update_side_by_side_diff(&diff);
-        
+        self.update_change_cache();
+
         self.reset_diff_scroll();
 
         Ok(())
@@ -347,8 +357,10 @@ impl App {
     fn update_side_by_side_diff(&mut self, diff: &str) {
         if matches!(self.effective_layout(), LayoutMode::SideBySide) {
             use crate::diff::HighlightedDiff;
-            let highlighted_diff = HighlightedDiff::new(diff, self.get_file_path().map(|p| p.as_path()));
-            self.current_side_by_side_diff = Some(SideBySideDiff::from_unified(&highlighted_diff.lines));
+            let highlighted_diff =
+                HighlightedDiff::new(diff, self.get_file_path().map(|p| p.as_path()));
+            self.current_side_by_side_diff =
+                Some(SideBySideDiff::from_unified(&highlighted_diff.lines));
         } else {
             // Clear side-by-side diff when not needed
             self.current_side_by_side_diff = None;
@@ -389,9 +401,9 @@ impl App {
 
     pub fn handle_resize(&mut self, width: u16, height: u16) {
         let old_effective_layout = self.effective_layout();
-        
+
         self.ui_state.handle_resize(width, height);
-        
+
         // Check if effective layout changed (for Auto mode)
         let new_effective_layout = self.effective_layout();
         if old_effective_layout != new_effective_layout && !self.current_diff.is_empty() {
@@ -455,7 +467,10 @@ impl App {
     }
 
     fn show_diff_range(&mut self, start_index: usize, end_index: usize) -> Result<()> {
-        if self.commits.is_empty() || start_index >= self.commits.len() || end_index >= self.commits.len() {
+        if self.commits.is_empty()
+            || start_index >= self.commits.len()
+            || end_index >= self.commits.len()
+        {
             return Ok(());
         }
 
@@ -465,19 +480,20 @@ impl App {
         let (older_index, newer_index) = if start_index > end_index {
             (start_index, end_index) // start is older (higher index)
         } else {
-            (end_index, start_index) // end is older (higher index) 
+            (end_index, start_index) // end is older (higher index)
         };
 
         let older_commit = &self.commits[older_index];
         let newer_commit = &self.commits[newer_index];
-        
+
         // Create cache key for the range diff (always older..newer)
         let cache_key = format!("{}..{}", older_commit.hash, newer_commit.hash);
-        
+
         // Check cache first
         if let Some(cached_diff) = self.diff_cache.get(&cache_key).cloned() {
             self.current_diff = cached_diff.clone();
             self.update_side_by_side_diff(&cached_diff);
+            self.update_change_cache();
             self.reset_diff_scroll();
             self.current_diff_range = Some((older_index, newer_index));
             return Ok(());
@@ -502,8 +518,9 @@ impl App {
         self.diff_cache.put(cache_key, diff.clone());
         self.current_diff = diff.clone();
         self.update_side_by_side_diff(&diff);
+        self.update_change_cache();
         self.reset_diff_scroll();
-        
+
         // Store the current range for UI display
         self.current_diff_range = Some((older_index, newer_index));
 
@@ -518,6 +535,9 @@ impl App {
 
         // Try handling with the specialized event handlers
         if self.handle_navigation_keys(key)? {
+            return Ok(());
+        }
+        if self.handle_change_navigation_keys(key)? {
             return Ok(());
         }
         if self.handle_scrolling_keys(key)? {
@@ -541,14 +561,21 @@ impl App {
             (KeyCode::Esc, _) => {
                 // Context-aware escape behavior
                 match &self.mode {
-                    AppMode::FilePicker { context: FilePickerContext::Initial, .. } => {
+                    AppMode::FilePicker {
+                        context: FilePickerContext::Initial,
+                        ..
+                    } => {
                         // Initial file picker (no file argument) - quit app
                         self.quit();
                     }
-                    AppMode::FilePicker { context: FilePickerContext::SwitchFile { .. }, .. } => {
+                    AppMode::FilePicker {
+                        context: FilePickerContext::SwitchFile { .. },
+                        ..
+                    } => {
                         // Switching files - return to previous file
                         if let Err(e) = self.return_to_previous_file() {
-                            self.error_message = Some(format!("Failed to return to previous file: {}", e));
+                            self.error_message =
+                                Some(format!("Failed to return to previous file: {}", e));
                         }
                     }
                     _ => {
@@ -566,7 +593,7 @@ impl App {
                     }
                 }
             }
-            
+
             // Navigation keys (arrow keys and Ctrl+N/P)
             (KeyCode::Up, KeyModifiers::NONE) => {
                 if let AppMode::FilePicker { ref mut state, .. } = self.mode {
@@ -590,7 +617,7 @@ impl App {
                     state.move_down();
                 }
             }
-            
+
             // Text editing keys
             (KeyCode::Backspace, KeyModifiers::NONE) => {
                 if let AppMode::FilePicker { ref mut state, .. } = self.mode {
@@ -602,19 +629,19 @@ impl App {
                     state.clear_query();
                 }
             }
-            
+
             // All regular characters for typing (including j, k, q, etc.)
             (KeyCode::Char(c), KeyModifiers::NONE) => {
                 if let AppMode::FilePicker { ref mut state, .. } = self.mode {
                     state.append_char(c);
                 }
             }
-            
+
             _ => {}
         }
         Ok(())
     }
-    
+
     // Helper functions for calculating content width
     pub fn calculate_max_diff_line_width(&self) -> usize {
         self.current_diff
@@ -623,21 +650,28 @@ impl App {
             .max()
             .unwrap_or(0)
     }
-    
+
     pub fn calculate_max_commit_line_width(&self) -> usize {
         self.commits
             .iter()
-            .map(|commit| format!("{} {}", commit.hash, commit.subject).chars().count())
+            .map(|commit| {
+                format!("{} {}", commit.hash, commit.subject)
+                    .chars()
+                    .count()
+            })
             .max()
             .unwrap_or(0)
     }
-    
+
     pub fn get_diff_line_count(&self) -> usize {
         match self.effective_layout() {
             crate::cli::LayoutMode::SideBySide => {
                 if let Some(ref side_by_side) = self.current_side_by_side_diff {
                     // Use the maximum of old_lines and new_lines length for side-by-side
-                    side_by_side.old_lines.len().max(side_by_side.new_lines.len())
+                    side_by_side
+                        .old_lines
+                        .len()
+                        .max(side_by_side.new_lines.len())
                 } else {
                     0
                 }
@@ -648,13 +682,13 @@ impl App {
             }
         }
     }
-    
+
     // Delegate to UIState for scroll calculation
     #[allow(dead_code)] // Used in tests
     pub fn get_page_scroll_size(&self) -> usize {
         self.ui_state.get_page_scroll_size()
     }
-    
+
     // Copy functionality methods
     pub fn copy_commit_sha(&mut self, short: bool) -> Result<()> {
         if self.commits.is_empty() || self.selected_index >= self.commits.len() {
@@ -662,8 +696,12 @@ impl App {
         }
 
         let commit = &self.commits[self.selected_index];
-        let format = if short { CopyFormat::ShortSha } else { CopyFormat::FullSha };
-        
+        let format = if short {
+            CopyFormat::ShortSha
+        } else {
+            CopyFormat::FullSha
+        };
+
         match self.copier.copy_commit_info(commit, format) {
             Ok(content) => {
                 self.copy_message = Some(format!("Copied: {}", content));
@@ -675,17 +713,17 @@ impl App {
                 self.start_message_timer();
             }
         }
-        
+
         Ok(())
     }
-    
+
     pub fn copy_commit_message(&mut self) -> Result<()> {
         if self.commits.is_empty() || self.selected_index >= self.commits.len() {
             return Ok(());
         }
 
         let commit = &self.commits[self.selected_index];
-        
+
         match self.copier.copy_commit_info(commit, CopyFormat::Message) {
             Ok(_) => {
                 self.copy_message = Some("Copied commit message".to_string());
@@ -697,17 +735,17 @@ impl App {
                 self.start_message_timer();
             }
         }
-        
+
         Ok(())
     }
-    
+
     pub fn copy_commit_author(&mut self) -> Result<()> {
         if self.commits.is_empty() || self.selected_index >= self.commits.len() {
             return Ok(());
         }
 
         let commit = &self.commits[self.selected_index];
-        
+
         match self.copier.copy_commit_info(commit, CopyFormat::Author) {
             Ok(content) => {
                 self.copy_message = Some(format!("Copied author: {}", content));
@@ -719,17 +757,17 @@ impl App {
                 self.start_message_timer();
             }
         }
-        
+
         Ok(())
     }
-    
+
     pub fn copy_commit_date(&mut self) -> Result<()> {
         if self.commits.is_empty() || self.selected_index >= self.commits.len() {
             return Ok(());
         }
 
         let commit = &self.commits[self.selected_index];
-        
+
         match self.copier.copy_commit_info(commit, CopyFormat::Date) {
             Ok(content) => {
                 self.copy_message = Some(format!("Copied date: {}", content));
@@ -741,17 +779,17 @@ impl App {
                 self.start_message_timer();
             }
         }
-        
+
         Ok(())
     }
-    
+
     pub fn copy_github_url(&mut self) -> Result<()> {
         if self.commits.is_empty() || self.selected_index >= self.commits.len() {
             return Ok(());
         }
 
         let commit = &self.commits[self.selected_index];
-        
+
         match self.copier.copy_commit_info(commit, CopyFormat::GitHubUrl) {
             Ok(content) => {
                 self.copy_message = Some(format!("Copied URL: {}", content));
@@ -763,20 +801,21 @@ impl App {
                 self.start_message_timer();
             }
         }
-        
+
         Ok(())
     }
-    
+
     pub fn start_copy_mode(&mut self) {
         self.copy_mode = Some(CopyMode::WaitingForTarget);
-        self.copy_message = Some("Copy mode: s=SHA, h=short, m=msg, a=author, d=date, u=URL, y=SHA".to_string());
+        self.copy_message =
+            Some("Copy mode: s=SHA, h=short, m=msg, a=author, d=date, u=URL, y=SHA".to_string());
     }
-    
+
     pub fn cancel_copy_mode(&mut self) {
         self.copy_mode = None;
         self.copy_message = None;
     }
-    
+
     #[allow(dead_code)]
     pub fn clear_copy_message(&mut self) {
         self.copy_message = None;
@@ -786,7 +825,7 @@ impl App {
     pub fn start_message_timer(&mut self) {
         self.message_timer = Some(std::time::Instant::now());
     }
-    
+
     pub fn check_message_timeout(&mut self) {
         if let Some(timer) = self.message_timer {
             if timer.elapsed().as_secs() >= 3 {
@@ -796,7 +835,7 @@ impl App {
             }
         }
     }
-    
+
     // Commit info popup methods
     pub fn show_commit_info_popup(&mut self) -> Result<()> {
         if self.commits.is_empty() || self.selected_index >= self.commits.len() {
@@ -804,28 +843,30 @@ impl App {
         }
 
         let selected_index = self.selected_index;
-        
+
         // Load additional commit metadata if not already loaded
         self.load_enhanced_commit_data_by_index(selected_index)?;
-        
+
         let enhanced_commit = self.commits[selected_index].clone();
-        self.commit_info_popup = Some(crate::ui::commit_info::CommitInfoPopup::new(enhanced_commit));
+        self.commit_info_popup = Some(crate::ui::commit_info::CommitInfoPopup::new(
+            enhanced_commit,
+        ));
         self.show_commit_info = true;
-        
+
         Ok(())
     }
-    
+
     pub fn hide_commit_info_popup(&mut self) {
         self.show_commit_info = false;
         self.commit_info_popup = None;
     }
-    
+
     pub fn scroll_commit_info_up(&mut self) {
         if let Some(ref mut popup) = self.commit_info_popup {
             popup.scroll_up();
         }
     }
-    
+
     pub fn scroll_commit_info_down(&mut self) {
         if let Some(ref mut popup) = self.commit_info_popup {
             let total_lines = popup.get_total_lines();
@@ -833,7 +874,101 @@ impl App {
             popup.scroll_down(total_lines, viewport_height);
         }
     }
-    
+
+    /// Update the change cache when diff changes
+    /// Call this in load_diff_for_selected_commit() and show_diff_range()
+    fn update_change_cache(&mut self) {
+        let highlighted_diff = crate::diff::HighlightedDiff::new(
+            &self.current_diff,
+            self.get_file_path().map(|p| p.as_path()),
+        );
+        self.current_changes = highlighted_diff.find_changes();
+        self.current_change_index = None; // Reset position
+    }
+
+    /// Clear change cache when switching files or modes
+    fn clear_change_cache(&mut self) {
+        self.current_changes.clear();
+        self.current_change_index = None;
+    }
+
+    /// Get current change status for UI display
+    #[allow(dead_code)] // Reserved for future UI enhancement
+    pub fn get_change_status(&self) -> Option<(usize, usize)> {
+        self.current_change_index
+            .map(|index| (index + 1, self.current_changes.len())) // 1-based for display
+    }
+
+    /// Navigate to the next change using binary search - O(log n)
+    pub fn navigate_to_next_change(&mut self) -> Result<()> {
+        if !matches!(self.get_focused_panel(), Some(FocusedPanel::Diff)) {
+            return Ok(());
+        }
+
+        if self.current_changes.is_empty() {
+            return Ok(());
+        }
+
+        let current_line = self.ui_state.diff_cursor_line;
+
+        // Binary search for next change position
+        let next_index = match self.current_changes.binary_search(&current_line) {
+            Ok(idx) => idx + 1, // Currently on a change, go to next
+            Err(idx) => idx,    // Insert position is the next change
+        };
+
+        if next_index < self.current_changes.len() {
+            let next_change_line = self.current_changes[next_index];
+            self.ui_state.diff_cursor_line = next_change_line;
+            self.ui_state
+                .ensure_cursor_visible(&self.effective_layout());
+            self.current_change_index = Some(next_index);
+        }
+
+        Ok(())
+    }
+
+    /// Navigate to the previous change using binary search - O(log n)
+    pub fn navigate_to_previous_change(&mut self) -> Result<()> {
+        if !matches!(self.get_focused_panel(), Some(FocusedPanel::Diff)) {
+            return Ok(());
+        }
+
+        if self.current_changes.is_empty() {
+            return Ok(());
+        }
+
+        let current_line = self.ui_state.diff_cursor_line;
+
+        // Binary search for previous change position
+        let prev_index = match self.current_changes.binary_search(&current_line) {
+            Ok(idx) => {
+                if idx > 0 {
+                    Some(idx - 1)
+                } else {
+                    None
+                }
+            }
+            Err(idx) => {
+                if idx > 0 {
+                    Some(idx - 1)
+                } else {
+                    None
+                }
+            }
+        };
+
+        if let Some(index) = prev_index {
+            let prev_change_line = self.current_changes[index];
+            self.ui_state.diff_cursor_line = prev_change_line;
+            self.ui_state
+                .ensure_cursor_visible(&self.effective_layout());
+            self.current_change_index = Some(index);
+        }
+
+        Ok(())
+    }
+
     fn load_enhanced_commit_data_by_index(&mut self, index: usize) -> Result<()> {
         if index >= self.commits.len() {
             return Ok(());
@@ -846,7 +981,8 @@ impl App {
 
         // Load refs if not already loaded
         if commit.refs.is_empty() {
-            if let Ok(refs) = crate::git::history::fetch_commit_refs(&self.repo_root, &commit.hash) {
+            if let Ok(refs) = crate::git::history::fetch_commit_refs(&self.repo_root, &commit.hash)
+            {
                 commit.refs = refs;
             }
         }
@@ -858,7 +994,9 @@ impl App {
 
         // Load stats if not already loaded
         if commit.stats.is_none() {
-            if let Ok(stats) = crate::git::history::fetch_commit_stats(&self.repo_root, &commit.hash) {
+            if let Ok(stats) =
+                crate::git::history::fetch_commit_stats(&self.repo_root, &commit.hash)
+            {
                 commit.stats = stats;
             }
         }

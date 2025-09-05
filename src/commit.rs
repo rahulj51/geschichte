@@ -62,7 +62,7 @@ impl Commit {
     ) -> Self {
         // Parse author string to extract name and email
         let (author_name, author_email) = Self::parse_author(&author);
-        
+
         Self {
             hash,
             short_hash,

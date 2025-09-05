@@ -32,7 +32,8 @@ pub fn draw_status_bar(frame: &mut Frame, app: &App, area: Rect) {
     }
 
     if app.copy_mode.is_some() {
-        let default_message = "Copy mode: s=SHA, h=short, m=msg, a=author, d=date, u=URL, y=SHA".to_string();
+        let default_message =
+            "Copy mode: s=SHA, h=short, m=msg, a=author, d=date, u=URL, y=SHA".to_string();
         let message = app.copy_message.as_ref().unwrap_or(&default_message);
         let copy_mode_bar = Paragraph::new(Line::from(vec![Span::styled(
             format!(" {}", message),
@@ -44,7 +45,9 @@ pub fn draw_status_bar(frame: &mut Frame, app: &App, area: Rect) {
 
     // Normal status display
     let focus_hint = match app.get_focused_panel() {
-        Some(FocusedPanel::Commits) => "↑↓/jk: select | i/Enter: info | y: copy | d: diff | a/s: h-scroll",
+        Some(FocusedPanel::Commits) => {
+            "↑↓/jk: select | i/Enter: info | y: copy | d: diff | a/s: h-scroll"
+        }
         Some(FocusedPanel::Diff) => "↑↓/jk: move cursor | PgUp/PgDn: scroll | a/s: h-scroll",
         None => "Type to search files",
     };
@@ -76,21 +79,23 @@ pub fn draw_help_overlay(frame: &mut Frame, _app: &App, area: Rect) {
     let popup_height = 19;
     let x = (area.width.saturating_sub(popup_width)) / 2;
     let y = (area.height.saturating_sub(popup_height)) / 2;
-    
+
     let popup_area = Rect {
         x,
         y,
         width: popup_width,
         height: popup_height,
     };
-    
+
     // Clear the background
     frame.render_widget(Clear, popup_area);
-    
+
     let help_text = vec![
         Line::from(vec![Span::styled(
             "Geschichte - Git File History Viewer",
-            Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
         )]),
         Line::from(""),
         Line::from(vec![
@@ -161,7 +166,7 @@ pub fn draw_help_overlay(frame: &mut Frame, _app: &App, area: Rect) {
             Style::default().fg(Color::Gray),
         )]),
     ];
-    
+
     let help_paragraph = Paragraph::new(help_text)
         .block(
             Block::default()
@@ -170,7 +175,6 @@ pub fn draw_help_overlay(frame: &mut Frame, _app: &App, area: Rect) {
                 .style(Style::default().fg(Color::White).bg(Color::Black)),
         )
         .alignment(Alignment::Left);
-    
+
     frame.render_widget(help_paragraph, popup_area);
 }
-

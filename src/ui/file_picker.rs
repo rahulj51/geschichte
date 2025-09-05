@@ -1,3 +1,4 @@
+use fuzzy_matcher::{skim::SkimMatcherV2, FuzzyMatcher};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Margin, Rect},
     style::{Color, Modifier, Style},
@@ -5,7 +6,6 @@ use ratatui::{
     widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph},
     Frame,
 };
-use fuzzy_matcher::{skim::SkimMatcherV2, FuzzyMatcher};
 
 use crate::git::files::{format_file_size, format_modified_time, GitFile};
 
@@ -50,7 +50,7 @@ impl FilePickerState {
             selected: 0,
             matcher: SkimMatcherV2::default(),
         };
-        
+
         // Initially show all files
         state.update_filter();
         state
@@ -106,18 +106,22 @@ impl FilePickerState {
 
         if self.query.is_empty() {
             // Show all files when no query
-            self.filtered_files = self.files
+            self.filtered_files = self
+                .files
                 .iter()
                 .enumerate()
                 .map(|(i, _)| (i, Vec::new()))
                 .collect();
         } else {
             // Fuzzy match against display path
-            let mut matches: Vec<_> = self.files
+            let mut matches: Vec<_> = self
+                .files
                 .iter()
                 .enumerate()
                 .filter_map(|(i, file)| {
-                    if let Some((score, indices)) = self.matcher.fuzzy_indices(&file.display_path, &self.query) {
+                    if let Some((score, indices)) =
+                        self.matcher.fuzzy_indices(&file.display_path, &self.query)
+                    {
                         Some((score, i, indices))
                     } else {
                         None
@@ -134,15 +138,19 @@ impl FilePickerState {
                 .map(|(_, file_index, indices)| (file_index, indices))
                 .collect();
         }
-
     }
 }
 
-pub fn draw_file_picker(frame: &mut Frame, state: &FilePickerState, context: &crate::app::FilePickerContext, area: Rect) {
+pub fn draw_file_picker(
+    frame: &mut Frame,
+    state: &FilePickerState,
+    context: &crate::app::FilePickerContext,
+    area: Rect,
+) {
     // Calculate popup size (80% of screen, but at least 60x20)
     let popup_width = (area.width as f32 * 0.8).max(60.0) as u16;
     let popup_height = (area.height as f32 * 0.8).max(20.0) as u16;
-    
+
     let popup_area = Rect {
         x: (area.width.saturating_sub(popup_width)) / 2,
         y: (area.height.saturating_sub(popup_height)) / 2,
@@ -158,7 +166,7 @@ pub fn draw_file_picker(frame: &mut Frame, state: &FilePickerState, context: &cr
         crate::app::FilePickerContext::Initial => " Select File ",
         crate::app::FilePickerContext::SwitchFile { .. } => " Switch to File ",
     };
-    
+
     let popup_block = Block::default()
         .title(title)
         .borders(Borders::ALL)
@@ -194,7 +202,7 @@ fn draw_search_box(frame: &mut Frame, state: &FilePickerState, area: Rect) {
         .style(Style::default().fg(Color::Cyan));
 
     let search_area = area.inner(Margin::new(1, 1));
-    
+
     // Show search icon and query with cursor
     let search_text = format!("🔍 {}", state.query);
     let search_paragraph = Paragraph::new(search_text)
@@ -212,14 +220,15 @@ fn draw_search_box(frame: &mut Frame, state: &FilePickerState, area: Rect) {
 }
 
 fn draw_file_list(frame: &mut Frame, state: &FilePickerState, area: Rect) {
-    let list_items: Vec<ListItem> = state.filtered_files
+    let list_items: Vec<ListItem> = state
+        .filtered_files
         .iter()
         .map(|(file_index, highlight_indices)| {
             let file = &state.files[*file_index];
-            
+
             // Create highlighted file path
             let highlighted_path = create_highlighted_text(&file.display_path, highlight_indices);
-            
+
             // File status symbol and metadata
             let status_symbol = file.status.symbol();
             let status_color = file.status.style_color();
@@ -227,20 +236,17 @@ fn draw_file_list(frame: &mut Frame, state: &FilePickerState, area: Rect) {
             let _size = format_file_size(file.size);
 
             // Create the line with proper spacing
-            let mut spans = vec![
-                Span::styled(
-                    format!("{} ", status_symbol),
-                    Style::default().fg(status_color).add_modifier(Modifier::BOLD),
-                ),
-            ];
+            let mut spans = vec![Span::styled(
+                format!("{} ", status_symbol),
+                Style::default()
+                    .fg(status_color)
+                    .add_modifier(Modifier::BOLD),
+            )];
             spans.extend(highlighted_path);
-            
+
             // Add metadata if there's space (simplified for now)
             let metadata = format!(" {}", modified);
-            spans.push(Span::styled(
-                metadata,
-                Style::default().fg(Color::Gray),
-            ));
+            spans.push(Span::styled(metadata, Style::default().fg(Color::Gray)));
 
             ListItem::new(Line::from(spans))
         })
@@ -264,28 +270,43 @@ fn draw_file_list(frame: &mut Frame, state: &FilePickerState, area: Rect) {
     frame.render_stateful_widget(files_list, area, &mut list_state);
 }
 
-fn draw_status_line(frame: &mut Frame, state: &FilePickerState, context: &crate::app::FilePickerContext, area: Rect) {
+fn draw_status_line(
+    frame: &mut Frame,
+    state: &FilePickerState,
+    context: &crate::app::FilePickerContext,
+    area: Rect,
+) {
     let total_files = state.files.len();
     let filtered_count = state.filtered_files.len();
-    
+
     // Add context information
     let context_info = match context {
         crate::app::FilePickerContext::Initial => "",
-        crate::app::FilePickerContext::SwitchFile { previous_file } => {
-            &format!(" • Current: {}", previous_file.file_name().unwrap_or_default().to_string_lossy())
-        }
+        crate::app::FilePickerContext::SwitchFile { previous_file } => &format!(
+            " • Current: {}",
+            previous_file
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+        ),
     };
-    
+
     // Context-aware escape message
     let esc_action = match context {
         crate::app::FilePickerContext::Initial => "quit",
         crate::app::FilePickerContext::SwitchFile { .. } => "return",
     };
-    
+
     let status_text = if state.query.is_empty() {
-        format!("📁 {} files{} • ↑↓/^P^N: navigate • Enter: select • Esc: {} • Type to search", total_files, context_info, esc_action)
+        format!(
+            "📁 {} files{} • ↑↓/^P^N: navigate • Enter: select • Esc: {} • Type to search",
+            total_files, context_info, esc_action
+        )
     } else {
-        format!("📁 {} files • {} matches{} • ↑↓/^P^N: navigate • Enter: select • Esc: {}", total_files, filtered_count, context_info, esc_action)
+        format!(
+            "📁 {} files • {} matches{} • ↑↓/^P^N: navigate • Enter: select • Esc: {}",
+            total_files, filtered_count, context_info, esc_action
+        )
     };
 
     let status_paragraph = Paragraph::new(status_text)
@@ -333,7 +354,10 @@ fn create_highlighted_text<'a>(text: &'a str, highlight_indices: &[usize]) -> Ve
 
     // If no highlights were added, return the original text
     if spans.is_empty() {
-        spans.push(Span::styled(text.to_string(), Style::default().fg(Color::White)));
+        spans.push(Span::styled(
+            text.to_string(),
+            Style::default().fg(Color::White),
+        ));
     }
 
     spans
