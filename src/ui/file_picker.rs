@@ -299,12 +299,12 @@ fn draw_status_line(
 
     let status_text = if state.query.is_empty() {
         format!(
-            "📁 {} files{} • ↑↓/^P^N: navigate • Enter: select • Esc: {} • Type to search",
+            "📁 {} files{} • ↑↓/^P^N: navigate • Enter: select • Ctrl+Q: {} • Type to search",
             total_files, context_info, esc_action
         )
     } else {
         format!(
-            "📁 {} files • {} matches{} • ↑↓/^P^N: navigate • Enter: select • Esc: {}",
+            "📁 {} files • {} matches{} • ↑↓/^P^N: navigate • Enter: select • Ctrl+Q: {}",
             total_files, filtered_count, context_info, esc_action
         )
     };

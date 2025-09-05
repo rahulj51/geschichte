@@ -225,7 +225,7 @@ geschichte --full-file --side-by-side README.md
 |-----|--------|
 | `↑↓` / `Ctrl+P/N` | Navigate file list |
 | `Enter` | Select file and view history |
-| `Esc` | Return to previous file (or quit if no previous file) |
+| `Ctrl+Q` | Return to previous file (or quit if no previous file) |
 | Type characters | Fuzzy search files |
 | `Ctrl+U` | Clear search |
 
@@ -387,7 +387,7 @@ The commit popup integrates seamlessly with the copy system - you can copy any c
                    │   README.md          2024-08-13   │
                    │   Cargo.toml         2024-08-12   │
                    │   ...                              │
-                   │ 📁 42 files • 4 matches • ↑↓: navigate • Enter: select • Esc: quit
+                   │ 📁 42 files • 4 matches • ↑↓: navigate • Enter: select • Ctrl+Q: quit
                    └───────────────────────────────────────┘
 ```
 

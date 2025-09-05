@@ -558,8 +558,8 @@ impl App {
 
         match (key.code, key.modifiers) {
             // Special commands first
-            (KeyCode::Esc, _) => {
-                // Context-aware escape behavior
+            (KeyCode::Char('q'), KeyModifiers::CONTROL) => {
+                // Context-aware Ctrl+Q behavior
                 match &self.mode {
                     AppMode::FilePicker {
                         context: FilePickerContext::Initial,
