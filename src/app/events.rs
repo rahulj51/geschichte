@@ -185,6 +185,20 @@ impl App {
                 self.toggle_diff_range_selection()?;
                 Ok(true)
             }
+            (KeyCode::Char('e'), KeyModifiers::NONE) => {
+                if let Some(focused_panel) = self.get_focused_panel() {
+                    match focused_panel {
+                        FocusedPanel::Commits => {
+                            self.open_editor();
+                        }
+                        FocusedPanel::Diff => {
+                            let layout_mode = self.effective_layout();
+                            self.open_editor();
+                        }
+                    }
+                }
+                Ok(true)
+            }
             (KeyCode::Char('?'), KeyModifiers::NONE) => {
                 self.ui_state.toggle_help();
                 Ok(true)

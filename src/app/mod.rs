@@ -1211,4 +1211,34 @@ impl App {
     pub fn clear_diff_search(&mut self) {
         self.diff_search_state = None;
     }
+
+    pub fn open_editor(&mut self) {
+        use std::os::windows::process::CommandExt;
+        use std::{
+            env,
+            process::{Command, Stdio},
+        };
+        const DETACHED_PROCESS: u32 = 0x00000008;
+        // const DETACHED_PROCESS: u32 = 0x00000016;
+        let current_file = self.get_file_path().expect("a legit path in string.");
+        let current_line = self.ui_state.diff_cursor_line;
+
+        {
+            // Get the editor command from the environment or fallback to "hx"
+            let editor = env::var("EDITOR").unwrap_or_else(|_| "hx".to_string());
+
+            // Launch the editor asynchronously
+            Command::new(editor)
+                .arg(current_file) // pass current file path
+                .arg(format!("+{}", current_line)) // pass +line number)
+                // .stdin(Stdio::null()) // detach stdio
+                // .stdout(Stdio::null())
+                // .stderr(Stdio::null())
+                .creation_flags(DETACHED_PROCESS)
+                .spawn()
+                .expect("Failed to launch editor");
+
+            // Program continues immediately without waiting for the editor to exit
+        }
+    }
 }
