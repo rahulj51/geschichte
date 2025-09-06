@@ -592,6 +592,32 @@ impl App {
 
         match (key.code, key.modifiers) {
             // Special commands first
+            (KeyCode::Esc, KeyModifiers::NONE) => {
+                match &self.mode {
+                    AppMode::FilePicker {
+                        context: FilePickerContext::Initial,
+                        ..
+                    } => {
+                        // Initial file picker (no file argument) - quit app
+                        self.quit();
+                    }
+                    AppMode::FilePicker {
+                        context: FilePickerContext::SwitchFile { .. },
+                        ..
+                    } => {
+                        // Switching files - return to previous file
+                        if let Err(e) = self.return_to_previous_file() {
+                            self.error_message =
+                                Some(format!("Failed to return to previous file: {}", e));
+                        }
+                    }
+                    AppMode::History { .. } => {
+                        todo!()
+                    } // _ => {
+                      //     self.quit();
+                      // }
+                }
+            }
             (KeyCode::Char('q'), KeyModifiers::CONTROL) => {
                 // Context-aware Ctrl+Q behavior
                 match &self.mode {
@@ -846,10 +872,49 @@ impl App {
         Ok(())
     }
 
+    pub fn copy_file_relative_path(&mut self) -> Result<()> {
+        if self.commits.is_empty() || self.selected_index >= self.commits.len() {
+            return Ok(());
+        }
+        use arboard::Clipboard;
+        let mut clipboard = Clipboard::new().ok();
+
+        let commit = &self.commits[self.selected_index];
+        self.copy_message = Some(format!("Copied Path: {:?}", self.get_file_path()));
+        self.copy_mode = None;
+        self.start_message_timer();
+
+        // todo!("should we implement in commitCopier?");
+        clipboard
+            .as_mut()
+            .expect("Clipboard should be initialized")
+            .set_text(
+                self.get_file_path()
+                    .expect("path, legit one")
+                    .to_string_lossy(),
+            )
+            .map_err(|e| format!("Failed to copy to clipboard"));
+
+        //match self.copier.copy_commit_info(commit, CopyFormat::RelPath) {
+        //    Ok(content) => {
+        //        self.copy_message = Some(format!("Copied URL: {}", content));
+        //        self.copy_mode = None;
+        //        self.start_message_timer();
+        //    }
+        //    Err(err) => {
+        //        self.error_message = Some(err);
+        //        self.start_message_timer();
+        //    }
+        //}
+
+        Ok(())
+    }
+
     pub fn start_copy_mode(&mut self) {
         self.copy_mode = Some(CopyMode::WaitingForTarget);
-        self.copy_message =
-            Some("Copy mode: s=SHA, h=short, m=msg, a=author, d=date, u=URL, y=SHA".to_string());
+        self.copy_message = Some(
+            "Copy mode: s=SHA, h=short, m=msg, a=author, d=date, u=URL, y=SHA, p=path".to_string(),
+        );
     }
 
     pub fn cancel_copy_mode(&mut self) {

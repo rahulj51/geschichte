@@ -12,7 +12,8 @@ mod ui;
 use anyhow::Result;
 use clap::Parser;
 use crossterm::event::{
-    self, DisableMouseCapture, EnableMouseCapture, Event, MouseButton, MouseEvent, MouseEventKind,
+    self, DisableMouseCapture, EnableMouseCapture, Event, KeyEventKind, MouseButton, MouseEvent,
+    MouseEventKind,
 };
 use std::time::Duration;
 
@@ -153,7 +154,13 @@ fn run_ui(terminal: &mut terminal::AppTerminal, app: &mut app::App) -> Result<()
             // Add error recovery for malformed terminal input
             match event::read() {
                 Ok(Event::Key(key)) => {
-                    app.handle_key(key)?;
+                    // HACK: The following line needs to be amended if and when enabling the
+                    // `KeyboardEnhancementFlags::REPORT_EVENT_TYPES` flag on unix.
+                    let event_kind_enabled = cfg!(target_family = "windows");
+                    let process_event = !event_kind_enabled || key.kind != KeyEventKind::Release;
+                    if process_event {
+                        app.handle_key(key)?;
+                    }
                 }
                 Ok(Event::Mouse(mouse_event)) => {
                     handle_mouse_event(app, mouse_event)?;
