@@ -592,6 +592,33 @@ impl App {
 
         match (key.code, key.modifiers) {
             // Special commands first
+            (KeyCode::Esc, KeyModifiers::NONE) => {
+                match &self.mode {
+                    AppMode::FilePicker {
+                        context: FilePickerContext::Initial,
+                        ..
+                    } => {
+                        // Initial file picker (no file argument) - quit app
+                        self.quit();
+                    }
+                    AppMode::FilePicker {
+                        context: FilePickerContext::SwitchFile { .. },
+                        ..
+                    } => {
+                        // Switching files - return to previous file
+                        if let Err(e) = self.return_to_previous_file() {
+                            self.error_message =
+                                Some(format!("Failed to return to previous file: {}", e));
+                        }
+                    }
+                    AppMode::History { .. } => {
+                        todo!()
+                    }
+                    // _ => {
+                    //     self.quit();
+                    // }
+                }
+            }
             (KeyCode::Char('q'), KeyModifiers::CONTROL) => {
                 // Context-aware Ctrl+Q behavior
                 match &self.mode {
