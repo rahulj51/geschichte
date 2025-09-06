@@ -1,4 +1,4 @@
-use crate::app::{App, FocusedPanel};
+use crate::app::{App, AppMode, FilePickerContext, FocusedPanel};
 use crate::error::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
@@ -136,8 +136,26 @@ impl App {
                             Some(format!("Failed to return to file picker: {}", e));
                     }
                 } else {
-                    self.quit();
+                    // HACK: revert the FilePicker context to Initial.
+                    use crate::app::FilePickerState;
+                    use crate::git::files::get_git_files;
+                    let files = get_git_files(&self.repo_root)?;
+                    self.mode = AppMode::FilePicker {
+                        state: FilePickerState::new(files),
+                        context: FilePickerContext::Initial,
+                    };
+                    // FIX: I wish it could be more like this tho.
+                    // self.mode = AppMode::FilePicker {
+                    //     state: mode.state,
+                    //     context: FilePickerContext::Initial,
+                    // };
+                    if let Err(e) = self.switch_to_file_picker() {
+                        self.error_message = Some(format!("Failed to open file picker: {}", e));
+                    }
                 }
+                // else {
+                //     self.quit();
+                // }
                 Ok(true)
             }
             (KeyCode::Char('h'), KeyModifiers::NONE) => {
