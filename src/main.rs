@@ -143,6 +143,10 @@ fn run(args: cli::Args) -> Result<()> {
 fn run_ui(terminal: &mut terminal::AppTerminal, app: &mut app::App) -> Result<()> {
     loop {
         // Draw the UI
+        if app.redraw_tui == true {
+            let _ = terminal.clear()?;
+            app.redraw_tui = false;
+        }
         terminal.draw(|frame| {
             // Update terminal dimensions before drawing
             app.handle_resize(frame.area().width, frame.area().height);

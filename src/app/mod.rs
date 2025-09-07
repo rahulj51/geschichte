@@ -11,6 +11,7 @@ use crate::ui::state::UIState;
 use regex::Regex;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::{env, process::Command};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FocusedPanel {
@@ -106,6 +107,9 @@ pub struct App {
 
     // File picker navigation state
     pub came_from_file_picker: bool,
+
+    // Signal for redrawing TUI.
+    pub redraw_tui: bool,
 }
 
 impl App {
@@ -168,6 +172,7 @@ impl App {
             message_timer: None,
             diff_search_state: None,
             came_from_file_picker: false,
+            redraw_tui: false,
         })
     }
 
@@ -211,6 +216,7 @@ impl App {
             message_timer: None,
             diff_search_state: None,
             came_from_file_picker: false,
+            redraw_tui: false,
         }
     }
 
@@ -1183,5 +1189,18 @@ impl App {
 
     pub fn clear_diff_search(&mut self) {
         self.diff_search_state = None;
+    }
+    pub fn open_editor(&mut self) -> Result<()> {
+        let current_file = self.get_file_path().expect("a legit path in string.");
+        let current_line = self.ui_state.diff_cursor_line;
+
+        let editor = env::var("EDITOR").unwrap_or_else(|_| "vim".to_string());
+
+        // Launch the editor asynchronously
+        let mut cmd = Command::new(editor);
+        cmd.arg(current_file) // pass current file path
+            .arg(format!("+{}", current_line)); // pass +line number)
+        cmd.status()?;
+        Ok(())
     }
 }
