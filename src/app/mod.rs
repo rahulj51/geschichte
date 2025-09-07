@@ -1200,7 +1200,7 @@ impl App {
         );
 
         let diff_detail = highlighted_diff.lines[current_diff_cursor].clone();
-        let current_line = diff_detail.new_line_num.unwrap_or_else(|| 0);
+        let current_line = diff_detail.new_line_num.unwrap_or(0);
 
         let editor = env::var("EDITOR").unwrap_or_else(|_| "vim".to_string());
 
