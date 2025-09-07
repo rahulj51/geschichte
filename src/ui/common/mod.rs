@@ -60,7 +60,7 @@ pub fn draw_status_bar(frame: &mut Frame, app: &App, area: Rect) {
         };
 
         let search_bar = Paragraph::new(Line::from(vec![Span::styled(
-            format!(" {} | n/N: next/prev | Esc: exit search", search_status),
+            format!(" {} | n/N: next/prev | q/Esc: exit search", search_status),
             Style::default().fg(Color::Black).bg(Color::Cyan),
         )]));
         frame.render_widget(search_bar, area);
@@ -190,7 +190,7 @@ pub fn draw_help_overlay(frame: &mut Frame, _app: &App, area: Rect) {
         ]),
         Line::from(""),
         Line::from(vec![Span::styled(
-            "Press ? or Esc to close",
+            "Press ? or q to close",
             Style::default().fg(Color::Gray),
         )]),
     ];

@@ -48,16 +48,16 @@ mod test {
     }
 
     #[test]
-    fn test_escape_behavior() {
+    fn test_q_key_behavior() {
         let mut app = create_test_app();
         app.diff_range_start = Some(1);
 
-        app.handle_key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE))
+        app.handle_key(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE))
             .unwrap();
         assert!(app.diff_range_start.is_none());
         assert!(!app.should_quit);
 
-        app.handle_key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE))
+        app.handle_key(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE))
             .unwrap();
         assert!(app.should_quit);
     }
@@ -333,5 +333,90 @@ mod test {
         } else {
             panic!("App should still be in FilePicker mode");
         }
+    }
+
+    #[test]
+    fn test_file_picker_return_functionality() {
+        use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+        use geschichte::ui::file_picker::FilePickerState;
+        use geschichte::{
+            app::*,
+            git::files::{FileStatus, GitFile},
+        };
+        use std::collections::HashMap;
+        use std::path::PathBuf;
+
+        // Create test files
+        let files = vec![
+            GitFile {
+                path: PathBuf::from("src/main.rs"),
+                display_path: "src/main.rs".to_string(),
+                status: FileStatus::Modified,
+                size: Some(1024),
+                modified: None,
+            },
+            GitFile {
+                path: PathBuf::from("README.md"),
+                display_path: "README.md".to_string(),
+                status: FileStatus::Staged,
+                size: Some(512),
+                modified: None,
+            },
+        ];
+
+        // Start with file picker
+        let file_picker_state = FilePickerState::new(files);
+        let mut app = App {
+            repo_root: PathBuf::from("."),
+            should_quit: false,
+            context_lines: 3,
+            follow_renames: true,
+            first_parent: false,
+            mode: AppMode::FilePicker {
+                state: file_picker_state,
+                context: FilePickerContext::Initial,
+            },
+            commits: Vec::new(),
+            selected_index: 0,
+            rename_map: HashMap::new(),
+            current_diff: String::new(),
+            current_side_by_side_diff: None,
+            diff_cache: geschichte::cache::DiffCache::new(10),
+            ui_state: geschichte::ui::state::UIState::new(),
+            layout_mode: geschichte::cli::LayoutMode::Unified,
+            loading: false,
+            error_message: None,
+            diff_range_start: None,
+            current_diff_range: None,
+            copy_mode: None,
+            copier: geschichte::copy::CommitCopier::new(),
+            copy_message: None,
+            show_commit_info: false,
+            commit_info_popup: None,
+            current_changes: Vec::new(),
+            current_change_index: None,
+            message_timer: None,
+            diff_search_state: None,
+            came_from_file_picker: false,
+        };
+
+        // Initially, came_from_file_picker should be false
+        assert!(!app.came_from_file_picker);
+
+        // Simulate selecting a file (Enter key)
+        app.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE))
+            .unwrap();
+
+        // Should now be in History mode with came_from_file_picker = true
+        assert!(matches!(app.mode, AppMode::History { .. }));
+        assert!(app.came_from_file_picker);
+
+        // Now press 'q' - should return to file picker
+        app.handle_key(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE))
+            .unwrap();
+
+        // Should be back in file picker mode and flag should be cleared
+        assert!(matches!(app.mode, AppMode::FilePicker { .. }));
+        assert!(!app.came_from_file_picker);
     }
 }
