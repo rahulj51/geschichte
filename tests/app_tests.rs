@@ -69,10 +69,98 @@ mod app_tests {
         assert!(app.copy_mode.is_some());
         assert!(app.copy_message.is_some());
 
+        // Verify that the help text includes the new 'p=path' option
+        let copy_message = app.copy_message.as_ref().unwrap();
+        assert!(
+            copy_message.contains("p=path"),
+            "Copy mode help should include p=path option"
+        );
+
         // Test canceling copy mode
         app.cancel_copy_mode();
         assert!(app.copy_mode.is_none());
         assert!(app.copy_message.is_none());
+    }
+
+    #[test]
+    fn test_copy_file_path_functionality() {
+        let mut app = create_test_app();
+        app.commits = create_test_commits();
+
+        // Test copy_file_relative_path function
+        let result = app.copy_file_relative_path();
+        assert!(result.is_ok(), "copy_file_relative_path should not error");
+
+        // Check that copy mode is cleared after copying
+        assert!(
+            app.copy_mode.is_none(),
+            "Copy mode should be cleared after copying file path"
+        );
+
+        // Check that a success message is set
+        assert!(
+            app.copy_message.is_some(),
+            "Should set a copy success message"
+        );
+        let copy_message = app.copy_message.as_ref().unwrap();
+        assert!(
+            copy_message.contains("Copied Path:"),
+            "Message should indicate path was copied"
+        );
+
+        // Check that message timer is started
+        assert!(
+            app.message_timer.is_some(),
+            "Message timer should be started after copying"
+        );
+
+        // Test with no commits (edge case)
+        app.commits.clear();
+        let result = app.copy_file_relative_path();
+        assert!(result.is_ok(), "Should handle empty commits gracefully");
+    }
+
+    #[test]
+    fn test_copy_mode_help_text_includes_path_option() {
+        let mut app = create_test_app();
+
+        // Start copy mode to trigger help text
+        app.start_copy_mode();
+
+        // Verify the help text includes all expected options including the new 'p=path'
+        let copy_message = app.copy_message.as_ref().unwrap();
+        assert!(
+            copy_message.contains("s=SHA"),
+            "Should include s=SHA option"
+        );
+        assert!(
+            copy_message.contains("h=short"),
+            "Should include h=short option"
+        );
+        assert!(
+            copy_message.contains("m=msg"),
+            "Should include m=msg option"
+        );
+        assert!(
+            copy_message.contains("a=author"),
+            "Should include a=author option"
+        );
+        assert!(
+            copy_message.contains("d=date"),
+            "Should include d=date option"
+        );
+        assert!(
+            copy_message.contains("u=URL"),
+            "Should include u=URL option"
+        );
+        assert!(
+            copy_message.contains("y=SHA"),
+            "Should include y=SHA option"
+        );
+        assert!(
+            copy_message.contains("p=path"),
+            "Should include p=path option"
+        );
     }
 
     #[test]

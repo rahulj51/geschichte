@@ -821,10 +821,40 @@ impl App {
         Ok(())
     }
 
+    pub fn copy_file_relative_path(&mut self) -> Result<()> {
+        if self.commits.is_empty() || self.selected_index >= self.commits.len() {
+            return Ok(());
+        }
+
+        if let Some(file_path) = self.get_file_path() {
+            use arboard::Clipboard;
+            match Clipboard::new() {
+                Ok(mut clipboard) => match clipboard.set_text(file_path.to_string_lossy()) {
+                    Ok(_) => {
+                        self.copy_message = Some(format!("Copied Path: {}", file_path.display()));
+                        self.copy_mode = None;
+                        self.start_message_timer();
+                    }
+                    Err(err) => {
+                        self.error_message = Some(format!("Failed to copy to clipboard: {}", err));
+                        self.start_message_timer();
+                    }
+                },
+                Err(err) => {
+                    self.error_message = Some(format!("Failed to initialize clipboard: {}", err));
+                    self.start_message_timer();
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     pub fn start_copy_mode(&mut self) {
         self.copy_mode = Some(CopyMode::WaitingForTarget);
-        self.copy_message =
-            Some("Copy mode: s=SHA, h=short, m=msg, a=author, d=date, u=URL, y=SHA".to_string());
+        self.copy_message = Some(
+            "Copy mode: s=SHA, h=short, m=msg, a=author, d=date, u=URL, y=SHA, p=path".to_string(),
+        );
     }
 
     pub fn cancel_copy_mode(&mut self) {

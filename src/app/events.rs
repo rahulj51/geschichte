@@ -251,6 +251,10 @@ impl App {
                             self.copy_github_url()?;
                             Ok(true)
                         }
+                        (KeyCode::Char('p'), KeyModifiers::NONE) => {
+                            self.copy_file_relative_path()?;
+                            Ok(true)
+                        }
                         _ => Ok(false),
                     }
                 } else {

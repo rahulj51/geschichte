@@ -39,7 +39,7 @@ I wrote this because I was badly missing this feature in 'Zed', my primary IDE. 
 
 ### Enhanced Commit Information
 - **Detailed commit popups** - View comprehensive commit metadata with scrollable interface
-- **Copy functionality** - Copy commit SHA, message, author, date, or GitHub URLs to clipboard
+- **Copy functionality** - Copy commit SHA, message, author, date, GitHub URLs, or file paths to clipboard
 - **Enhanced commit metadata** - Author/committer details, timestamps, refs, and PR information
 - **Pull request detection** - Automatic detection and display of GitHub PR information from commit messages
 - **Branch and tag refs** - See which branches and tags contain each commit
@@ -220,6 +220,7 @@ geschichte --full-file --side-by-side README.md
 | `a` | Copy author name and email |
 | `d` | Copy commit date |
 | `u` | Copy GitHub/GitLab URL |
+| `p` | Copy file relative path |
 | `y` | Copy full SHA (same as `s`) |
 
 ### File Picker (when open)
