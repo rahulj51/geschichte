@@ -17,6 +17,7 @@ pub enum CopyFormat {
     Author,
     Date,
     GitHubUrl,
+    RelPath,
 }
 
 impl fmt::Display for CopyFormat {
@@ -29,6 +30,7 @@ impl fmt::Display for CopyFormat {
             CopyFormat::Author => write!(f, "Author"),
             CopyFormat::Date => write!(f, "Date"),
             CopyFormat::GitHubUrl => write!(f, "GitHub URL"),
+            CopyFormat::RelPath => write!(f, "Relative path"),
         }
     }
 }
@@ -68,6 +70,9 @@ impl CommitCopier {
                 } else {
                     format!("https://github.com/repo/commit/{}", commit.hash)
                 }
+            }
+            CopyFormat::RelPath => {
+                todo!();
             }
         };
 

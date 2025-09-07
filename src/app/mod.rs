@@ -610,10 +610,9 @@ impl App {
                     }
                     AppMode::History { .. } => {
                         todo!()
-                    }
-                    // _ => {
-                    //     self.quit();
-                    // }
+                    } // _ => {
+                      //     self.quit();
+                      // }
                 }
             }
             (KeyCode::Char('q'), KeyModifiers::CONTROL) => {
@@ -852,27 +851,36 @@ impl App {
         if self.commits.is_empty() || self.selected_index >= self.commits.len() {
             return Ok(());
         }
+        use arboard::Clipboard;
+        let mut clipboard = Clipboard::new().ok();
 
-        if let Some(file_path) = self.get_file_path() {
-            use arboard::Clipboard;
-            match Clipboard::new() {
-                Ok(mut clipboard) => match clipboard.set_text(file_path.to_string_lossy()) {
-                    Ok(_) => {
-                        self.copy_message = Some(format!("Copied Path: {}", file_path.display()));
-                        self.copy_mode = None;
-                        self.start_message_timer();
-                    }
-                    Err(err) => {
-                        self.error_message = Some(format!("Failed to copy to clipboard: {}", err));
-                        self.start_message_timer();
-                    }
-                },
-                Err(err) => {
-                    self.error_message = Some(format!("Failed to initialize clipboard: {}", err));
-                    self.start_message_timer();
-                }
-            }
-        }
+        let commit = &self.commits[self.selected_index];
+        self.copy_message = Some(format!("Copied Path: {:?}", self.get_file_path()));
+        self.copy_mode = None;
+        self.start_message_timer();
+
+        // todo!("should we implement in commitCopier?");
+        clipboard
+            .as_mut()
+            .expect("Clipboard should be initialized")
+            .set_text(
+                self.get_file_path()
+                    .expect("path, legit one")
+                    .to_string_lossy(),
+            )
+            .map_err(|e| format!("Failed to copy to clipboard"));
+
+        //match self.copier.copy_commit_info(commit, CopyFormat::RelPath) {
+        //    Ok(content) => {
+        //        self.copy_message = Some(format!("Copied URL: {}", content));
+        //        self.copy_mode = None;
+        //        self.start_message_timer();
+        //    }
+        //    Err(err) => {
+        //        self.error_message = Some(err);
+        //        self.start_message_timer();
+        //    }
+        //}
 
         Ok(())
     }
