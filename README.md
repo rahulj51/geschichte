@@ -236,13 +236,13 @@ geschichte --full-file --side-by-side README.md
 |-----|--------|
 | Type characters | Search for text in diff content |
 | `Enter` | Finish typing and navigate to first result |
-| `Esc` | Cancel search and return to normal mode |
+| `q` / `Esc` | Cancel search and return to normal mode |
 
 ### General
 | Key | Action |
 |-----|--------|
 | `?` | Show/hide help overlay |
-| `q` / `Esc` | Quit (context-aware) |
+| `q` | Quit (context-aware) |
 
 ## Side-by-Side Diff View
 
@@ -294,7 +294,7 @@ Geschichte allows you to compare any two commits to see exactly what changed bet
 1. **Mark First Commit**: Navigate to any commit and press `d` - you'll see a green `► ` marker
 2. **Select Second Commit**: Navigate to another commit and press `d` again
 3. **View Diff**: The diff panel automatically updates to show changes between the two commits
-4. **Clear Selection**: Press `Esc` to clear the selection and return to normal mode
+4. **Clear Selection**: Press `q` to clear the selection and return to normal mode
 
 ### Visual Indicators
 
@@ -325,7 +325,7 @@ Geschichte provides comprehensive commit metadata through an interactive popup t
 - **From commit list**: Press `i` or `Enter` on any commit
 - **Navigation**: Use `↑↓` or `j/k` to scroll through the popup content
 - **Copy shortcuts**: Press `c` to copy the commit SHA directly from the popup
-- **Close**: Press `q` or `Esc` to close the popup
+- **Close**: Press `q` to close the popup
 
 ### What's Included
 
@@ -360,7 +360,7 @@ Geschichte provides powerful search functionality to help you find specific code
 1. **Start Search**: Press `/` while viewing a diff to enter search mode
 2. **Type Query**: Start typing your search term (case-insensitive by default)
 3. **Navigate Results**: Press `Enter` to finish typing, then use `n`/`N` to move between matches
-4. **Exit Search**: Press `Esc` to clear search and return to normal navigation
+4. **Exit Search**: Press `q` or `Esc` to clear search and return to normal navigation
 
 ### Search Features
 
@@ -389,10 +389,10 @@ Geschichte provides powerful search functionality to help you find specific code
 When searching with regex patterns:
 ```bash
 # Literal search: "function"
-# Status bar: "3/7 matches for 'function' | n/N: next/prev | Esc: exit search"
+# Status bar: "3/7 matches for 'function' | n/N: next/prev | q/Esc: exit search"
 
 # Regex search: "fn.*test"  
-# Status bar: "2/4 matches for 'fn.*test' | n/N: next/prev | Esc: exit search"
+# Status bar: "2/4 matches for 'fn.*test' | n/N: next/prev | q/Esc: exit search"
 
 @@ -10,6 +10,8 @@ impl MyStruct {
  impl MyStruct {
@@ -443,7 +443,7 @@ When searching with regex patterns:
 │ │ │ - Password validation                          │ │
 │ │ │ - Session management                           │ │
 │ │ └─────────────────────────────────────────────────┘ │
-│ [↑↓/jk] Scroll  [c] Copy hash  [Esc/q] Close         │
+│ [↑↓/jk] Scroll  [c] Copy hash  [q] Close             │
 └────────────────────────────────────────────────────────┘
 ```
 

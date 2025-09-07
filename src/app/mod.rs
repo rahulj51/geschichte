@@ -103,6 +103,9 @@ pub struct App {
 
     // Diff search state
     pub diff_search_state: Option<DiffSearchState>,
+
+    // File picker navigation state
+    pub came_from_file_picker: bool,
 }
 
 impl App {
@@ -164,6 +167,7 @@ impl App {
             current_change_index: None,
             message_timer: None,
             diff_search_state: None,
+            came_from_file_picker: false,
         })
     }
 
@@ -206,14 +210,18 @@ impl App {
             current_change_index: None,
             message_timer: None,
             diff_search_state: None,
+            came_from_file_picker: false,
         }
     }
 
-    pub fn switch_to_history(&mut self, file_path: PathBuf) -> Result<()> {
+    pub fn switch_to_history(&mut self, file_path: PathBuf, from_picker: bool) -> Result<()> {
         self.mode = AppMode::History {
             file_path,
             focused_panel: FocusedPanel::Commits,
         };
+
+        // Track whether we came from file picker
+        self.came_from_file_picker = from_picker;
 
         // Clear existing data
         self.commits.clear();
@@ -248,21 +256,10 @@ impl App {
             context: FilePickerContext::SwitchFile { previous_file },
         };
 
+        // Clear the flag since we're now in file picker mode
+        self.came_from_file_picker = false;
+
         Ok(())
-    }
-
-    pub fn return_to_previous_file(&mut self) -> Result<()> {
-        // Only works if we're in file picker with SwitchFile context
-        let previous_file = match &self.mode {
-            AppMode::FilePicker {
-                context: FilePickerContext::SwitchFile { previous_file },
-                ..
-            } => previous_file.clone(),
-            _ => return Ok(()), // No-op if not in the right context
-        };
-
-        // Switch back to the previous file
-        self.switch_to_history(previous_file)
     }
 
     pub fn load_git_data(&mut self) -> Result<()> {
@@ -620,37 +617,15 @@ impl App {
                 }
             }
             (KeyCode::Char('q'), KeyModifiers::CONTROL) => {
-                // Context-aware Ctrl+Q behavior
-                match &self.mode {
-                    AppMode::FilePicker {
-                        context: FilePickerContext::Initial,
-                        ..
-                    } => {
-                        // Initial file picker (no file argument) - quit app
-                        self.quit();
-                    }
-                    AppMode::FilePicker {
-                        context: FilePickerContext::SwitchFile { .. },
-                        ..
-                    } => {
-                        // Switching files - return to previous file
-                        if let Err(e) = self.return_to_previous_file() {
-                            self.error_message =
-                                Some(format!("Failed to return to previous file: {}", e));
-                        }
-                    }
-                    _ => {
-                        // Shouldn't happen in file picker mode, but safe fallback
-                        self.quit();
-                    }
-                }
+                // Ctrl+Q always quits the app regardless of context
+                self.quit();
             }
             (KeyCode::Enter, KeyModifiers::NONE) => {
                 // Select file and switch to history mode
                 if let AppMode::FilePicker { ref state, .. } = self.mode {
                     if let Some(selected_file) = state.get_selected_file() {
                         let file_path = selected_file.path.clone();
-                        self.switch_to_history(file_path)?;
+                        self.switch_to_history(file_path, true)?;
                     }
                 }
             }

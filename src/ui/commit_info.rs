@@ -247,7 +247,7 @@ impl CommitInfoPopup {
     }
 
     fn render_help(&self, frame: &mut Frame, area: Rect) {
-        let help_text = "[↑↓/jk] Scroll  [c] Copy hash  [m] Copy message  [Esc/q] Close";
+        let help_text = "[↑↓/jk] Scroll  [c] Copy hash  [m] Copy message  [q] Close";
         let help = Paragraph::new(help_text)
             .style(Style::default().fg(Color::DarkGray))
             .alignment(Alignment::Center);

@@ -119,14 +119,6 @@ impl App {
     pub fn handle_ui_keys(&mut self, key: KeyEvent) -> Result<bool> {
         match (key.code, key.modifiers) {
             (KeyCode::Char('q'), KeyModifiers::NONE) => {
-                if self.show_commit_info {
-                    self.hide_commit_info_popup();
-                } else {
-                    self.quit();
-                }
-                Ok(true)
-            }
-            (KeyCode::Esc, _) => {
                 if self.ui_state.show_help {
                     self.ui_state.show_help = false;
                 } else if self.show_commit_info {
@@ -137,6 +129,12 @@ impl App {
                     self.cancel_copy_mode();
                 } else if self.diff_range_start.is_some() {
                     self.clear_diff_range_selection();
+                } else if self.came_from_file_picker {
+                    // Return to file picker if we came from there
+                    if let Err(e) = self.switch_to_file_picker() {
+                        self.error_message =
+                            Some(format!("Failed to return to file picker: {}", e));
+                    }
                 } else {
                     // HACK: revert the FilePicker context to Initial.
                     use crate::app::FilePickerState;
@@ -326,6 +324,10 @@ impl App {
             }
 
             match (key.code, key.modifiers) {
+                (KeyCode::Char('q'), KeyModifiers::NONE) | (KeyCode::Esc, _) => {
+                    self.clear_diff_search();
+                    Ok(true)
+                }
                 (KeyCode::Char(c), KeyModifiers::NONE) => {
                     search_state.query.push(c);
                     self.update_search_results()?;
@@ -342,10 +344,6 @@ impl App {
                         search_state.current_result = Some(0);
                         self.scroll_to_search_result(0)?;
                     }
-                    Ok(true)
-                }
-                (KeyCode::Esc, _) => {
-                    self.clear_diff_search();
                     Ok(true)
                 }
                 _ => Ok(false),
