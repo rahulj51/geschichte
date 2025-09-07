@@ -180,6 +180,7 @@ impl App {
             }
             (KeyCode::Char('e'), KeyModifiers::NONE) => {
                 self.open_editor()?;
+                self.refresh_current_diff()?;
                 self.redraw_tui = true;
                 Ok(true)
             }

@@ -1198,6 +1198,17 @@ impl App {
     pub fn clear_diff_search(&mut self) {
         self.diff_search_state = None;
     }
+
+    pub fn clear_diff_cache(&mut self) {
+        self.diff_cache.clear();
+        self.cached_highlighted_diff = None;
+    }
+
+    pub fn refresh_current_diff(&mut self) -> Result<()> {
+        self.clear_diff_cache();
+        self.load_git_data()?;
+        self.load_diff_for_selected_commit()
+    }
     pub fn open_editor(&mut self) -> Result<()> {
         let current_file_path = self.get_file_path().expect("a legit path in string.");
 
