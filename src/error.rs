@@ -43,3 +43,15 @@ pub enum GeschichteError {
 }
 
 pub type Result<T> = std::result::Result<T, GeschichteError>;
+
+/// Check if we're running in a CI environment where clipboard operations may not work
+pub fn is_ci_environment() -> bool {
+    std::env::var("CI").is_ok()
+        || std::env::var("CONTINUOUS_INTEGRATION").is_ok()
+        || std::env::var("GITHUB_ACTIONS").is_ok()
+        || std::env::var("GITLAB_CI").is_ok()
+        || std::env::var("JENKINS_URL").is_ok()
+        || std::env::var("BUILDKITE").is_ok()
+        || std::env::var("CIRCLECI").is_ok()
+        || std::env::var("TRAVIS").is_ok()
+}
