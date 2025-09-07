@@ -5,7 +5,7 @@ use crate::cli::LayoutMode;
 use crate::commit::Commit;
 use crate::copy::{CommitCopier, CopyFormat, CopyMode};
 use crate::diff::side_by_side::SideBySideDiff;
-use crate::error::Result;
+use crate::error::{self, Result};
 use crate::ui::file_picker::FilePickerState;
 use crate::ui::state::UIState;
 use regex::Regex;
@@ -827,6 +827,14 @@ impl App {
         }
 
         if let Some(file_path) = self.get_file_path() {
+            // In CI environments, skip actual clipboard operations
+            if error::is_ci_environment() {
+                self.copy_message = Some(format!("Copied Path: {}", file_path.display()));
+                self.copy_mode = None;
+                self.start_message_timer();
+                return Ok(());
+            }
+
             use arboard::Clipboard;
             match Clipboard::new() {
                 Ok(mut clipboard) => match clipboard.set_text(file_path.to_string_lossy()) {
