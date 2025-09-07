@@ -1191,7 +1191,7 @@ impl App {
         self.diff_search_state = None;
     }
     pub fn open_editor(&mut self) -> Result<()> {
-        let current_file = self.get_file_path().expect("a legit path in string.");
+        let current_file_path = self.get_file_path().expect("a legit path in string.");
         let current_diff_cursor = self.ui_state.diff_cursor_line;
 
         let highlighted_diff = crate::diff::HighlightedDiff::new(
@@ -1200,14 +1200,41 @@ impl App {
         );
 
         let diff_detail = highlighted_diff.lines[current_diff_cursor].clone();
-        let current_line = diff_detail.new_line_num.unwrap_or(0);
+        let current_line = diff_detail
+            .new_line_num
+            .unwrap_or_else(|| diff_detail.old_line_num.unwrap_or(0));
 
-        let editor = env::var("EDITOR").unwrap_or_else(|_| "vim".to_string());
-
-        // Launch the editor asynchronously
-        let mut cmd = Command::new(editor);
-        cmd.arg(current_file) // pass current file path
-            .arg(format!("+{}", current_line)); // pass +line number)
+        let editor_name = env::var("EDITOR").unwrap_or_else(|_| "vim".to_string());
+        let mut cmd = Command::new(editor_name.as_str());
+        // INFO: try to be inclusive
+        match editor_name.as_str() {
+            e if ["vi", "vim", "nvim", "kak", "nano"].contains(&e) => {
+                cmd.arg(format!("+{current_line}")).arg(current_file_path);
+            }
+            e if ["hx", "helix", "subl", "sublime_text", "edit", "zed"].contains(&e) => {
+                cmd.arg(format!(
+                    "{}:{}",
+                    current_file_path.to_string_lossy(),
+                    current_line
+                ));
+            }
+            e if ["code", "code-insiders", "codium", "vscodium"].contains(&e) => {
+                cmd.arg("-g").arg(format!(
+                    "{}:{}",
+                    current_file_path.to_string_lossy(),
+                    current_line
+                ));
+            }
+            e if ["emacs", "emacsclient"].contains(&e) => {
+                cmd.arg(format!("+{current_line}:0")).arg(current_file_path);
+            }
+            "notepad++" => {
+                cmd.arg(current_file_path).arg(format!("-n{current_line}"));
+            }
+            _ => {
+                cmd.arg(current_file_path);
+            }
+        }
         cmd.status()?;
         Ok(())
     }
