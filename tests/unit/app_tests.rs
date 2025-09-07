@@ -399,6 +399,7 @@ mod test {
             diff_search_state: None,
             came_from_file_picker: false,
             redraw_tui: false,
+            cached_highlighted_diff: None,
         };
 
         // Initially, came_from_file_picker should be false

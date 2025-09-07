@@ -384,7 +384,11 @@ pub fn parse_diff(diff_text: &str) -> Vec<DiffLine> {
     let mut new_line_num = 0;
 
     for line in diff_text.lines() {
-        let line_type = if line.starts_with("diff --git") || line.starts_with("index ") {
+        let line_type = if line.starts_with("diff --git")
+            || line.starts_with("index ")
+            || line.starts_with("---")
+            || line.starts_with("+++")
+        {
             DiffLineType::Header
         } else if line.starts_with("@@") {
             // Parse hunk header to get line numbers

@@ -110,6 +110,9 @@ pub struct App {
 
     // Signal for redrawing TUI.
     pub redraw_tui: bool,
+
+    // Cached highlighted diff for performance and consistency
+    pub cached_highlighted_diff: Option<crate::diff::HighlightedDiff>,
 }
 
 impl App {
@@ -173,6 +176,7 @@ impl App {
             diff_search_state: None,
             came_from_file_picker: false,
             redraw_tui: false,
+            cached_highlighted_diff: None,
         })
     }
 
@@ -217,6 +221,7 @@ impl App {
             diff_search_state: None,
             came_from_file_picker: false,
             redraw_tui: false,
+            cached_highlighted_diff: None,
         }
     }
 
@@ -944,6 +949,9 @@ impl App {
         );
         self.current_changes = highlighted_diff.find_changes();
         self.current_change_index = None; // Reset position
+
+        // Cache the highlighted diff for editor integration and consistency
+        self.cached_highlighted_diff = Some(highlighted_diff);
     }
 
     /// Clear change cache when switching files or modes
@@ -1192,49 +1200,59 @@ impl App {
     }
     pub fn open_editor(&mut self) -> Result<()> {
         let current_file_path = self.get_file_path().expect("a legit path in string.");
-        let current_diff_cursor = self.ui_state.diff_cursor_line;
 
-        let highlighted_diff = crate::diff::HighlightedDiff::new(
-            &self.current_diff,
-            self.get_file_path().map(|p| p.as_path()),
-        );
-
-        let diff_detail = highlighted_diff.lines[current_diff_cursor].clone();
-        let current_line = diff_detail
-            .new_line_num
-            .unwrap_or_else(|| diff_detail.old_line_num.unwrap_or(0));
+        // Get file line number from cached highlighted diff
+        let file_line_number = self
+            .cached_highlighted_diff
+            .as_ref()
+            .and_then(|diff| diff.lines.get(self.ui_state.diff_cursor_line))
+            .and_then(|line| match line.line_type {
+                crate::diff::DiffLineType::Addition | crate::diff::DiffLineType::Context => {
+                    line.new_line_num
+                }
+                crate::diff::DiffLineType::Deletion => line.old_line_num,
+                // Headers and hunk headers don't correspond to file lines
+                crate::diff::DiffLineType::Header | crate::diff::DiffLineType::HunkHeader => None,
+            });
 
         let editor_name = env::var("EDITOR").unwrap_or_else(|_| "vim".to_string());
         let mut cmd = Command::new(editor_name.as_str());
-        // INFO: try to be inclusive
-        match editor_name.as_str() {
-            e if ["vi", "vim", "nvim", "kak", "nano"].contains(&e) => {
-                cmd.arg(format!("+{current_line}")).arg(current_file_path);
+
+        // Only add line number if we found a valid one
+        if let Some(line_num) = file_line_number {
+            // INFO: try to be inclusive
+            match editor_name.as_str() {
+                e if ["vi", "vim", "nvim", "kak", "nano"].contains(&e) => {
+                    cmd.arg(format!("+{line_num}")).arg(current_file_path);
+                }
+                e if ["hx", "helix", "subl", "sublime_text", "edit", "zed"].contains(&e) => {
+                    cmd.arg(format!(
+                        "{}:{}",
+                        current_file_path.to_string_lossy(),
+                        line_num
+                    ));
+                }
+                e if ["code", "code-insiders", "codium", "vscodium"].contains(&e) => {
+                    cmd.arg("-g").arg(format!(
+                        "{}:{}",
+                        current_file_path.to_string_lossy(),
+                        line_num
+                    ));
+                }
+                e if ["emacs", "emacsclient"].contains(&e) => {
+                    cmd.arg(format!("+{line_num}:0")).arg(current_file_path);
+                }
+                "notepad++" => {
+                    cmd.arg(current_file_path).arg(format!("-n{line_num}"));
+                }
+                _ => {
+                    cmd.arg(current_file_path);
+                }
             }
-            e if ["hx", "helix", "subl", "sublime_text", "edit", "zed"].contains(&e) => {
-                cmd.arg(format!(
-                    "{}:{}",
-                    current_file_path.to_string_lossy(),
-                    current_line
-                ));
-            }
-            e if ["code", "code-insiders", "codium", "vscodium"].contains(&e) => {
-                cmd.arg("-g").arg(format!(
-                    "{}:{}",
-                    current_file_path.to_string_lossy(),
-                    current_line
-                ));
-            }
-            e if ["emacs", "emacsclient"].contains(&e) => {
-                cmd.arg(format!("+{current_line}:0")).arg(current_file_path);
-            }
-            "notepad++" => {
-                cmd.arg(current_file_path).arg(format!("-n{current_line}"));
-            }
-            _ => {
-                cmd.arg(current_file_path);
-            }
+        } else {
+            cmd.arg(current_file_path);
         }
+
         cmd.status()?;
         Ok(())
     }
