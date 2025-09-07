@@ -178,6 +178,11 @@ impl App {
                 }
                 Ok(true)
             }
+            (KeyCode::Char('e'), KeyModifiers::NONE) => {
+                self.open_editor()?;
+                self.redraw_tui = true;
+                Ok(true)
+            }
             _ => Ok(false),
         }
     }

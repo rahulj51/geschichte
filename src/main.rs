@@ -143,6 +143,10 @@ fn run(args: cli::Args) -> Result<()> {
 fn run_ui(terminal: &mut terminal::AppTerminal, app: &mut app::App) -> Result<()> {
     loop {
         // Draw the UI
+        if app.redraw_tui {
+            terminal::force_terminal_reset(terminal)?;
+            app.redraw_tui = false;
+        }
         terminal.draw(|frame| {
             // Update terminal dimensions before drawing
             app.handle_resize(frame.area().width, frame.area().height);
@@ -184,6 +188,7 @@ fn run_ui(terminal: &mut terminal::AppTerminal, app: &mut app::App) -> Result<()
 
         // Check if we should quit
         if app.should_quit {
+            terminal.clear()?;
             break;
         }
     }

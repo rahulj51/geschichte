@@ -47,6 +47,7 @@ I wrote this because I was badly missing this feature in 'Zed', my primary IDE. 
 
 ### User Experience
 - **Seamless file switching** - Switch between files without losing context using 'f' key
+- **External editor integration** - Press 'e' to open current file in your preferred editor at the current line
 - **Mac-friendly navigation** - Multiple scroll options (PageUp/Down, Ctrl+D/U, Ctrl+F/B)
 - **Mouse support** - Scrolling support with mouse
 - **Focus-aware controls** - Arrow keys work differently based on active panel
@@ -201,6 +202,7 @@ geschichte --full-file --side-by-side README.md
 | `/` | Start search in diff content |
 | `n` | Navigate to next change (or next search result when searching) |
 | `N` | Navigate to previous change (or previous search result when searching) |
+| `e` | Open current file in external editor at current line |
 
 ### Commit Information & Copy
 | Key | Action |
@@ -316,6 +318,65 @@ Geschichte allows you to compare any two commits to see exactly what changed bet
 ```
 
 The range diff works across any two commits - compare your working directory with any historical commit, or see what changed between two releases!
+
+## External Editor Integration
+
+Geschichte seamlessly integrates with your favorite text editor, allowing you to quickly jump from viewing history to editing the actual file.
+
+### How to Use
+
+1. **Navigate to any line** in the diff view using arrow keys or vim-style navigation
+2. **Press `e`** to open the current file in your external editor
+3. **Editor opens at the current line** - no need to scroll or search for the right location
+4. **Make your edits** in the familiar environment of your preferred editor
+5. **Exit the editor** - Geschichte automatically refreshes and shows updated content
+
+### Editor Configuration
+
+Geschichte respects your `$EDITOR` environment variable:
+
+```bash
+# Set your preferred editor (examples)
+export EDITOR="vim"           # Use vim
+export EDITOR="nvim"          # Use Neovim  
+export EDITOR="code -w"       # Use VS Code (wait for window to close)
+export EDITOR="cursor -w"     # Use Cursor (wait for window to close)
+export EDITOR="zed -w"        # Use Zed (wait for window to close)
+export EDITOR="subl -w"       # Use Sublime Text (wait for window to close)
+export EDITOR="nano"          # Use nano
+```
+
+If no `$EDITOR` is set, Geschichte defaults to `vim`.
+
+### Supported Editors
+
+**Terminal Editors**: vim, nvim, nano, emacs - work seamlessly with line number positioning
+
+**GUI Editors**: VS Code, Cursor, Zed, Sublime Text, Atom - use the `-w` flag to make Geschichte wait for the editor to close
+
+### Editor Arguments
+
+Geschichte automatically passes the current line number to editors that support it:
+- **Vim/Neovim**: `vim +42 file.rs` (opens at line 42)
+- **VS Code**: `code -g file.rs:42` (opens at line 42) 
+- **Nano**: `nano +42 file.rs` (opens at line 42)
+
+### Example Workflow
+
+```bash
+# 1. View history of a file
+geschichte src/main.rs
+
+# 2. Navigate to interesting commit and line in diff
+# 3. Press 'e' to edit
+# 4. Editor opens: vim +127 src/main.rs
+# 5. Make changes and save
+# 6. Exit editor - back to Geschichte with updated view
+```
+
+### Terminal Refresh
+
+Geschichte automatically handles terminal state restoration after returning from external editors, ensuring a clean interface without artifacts or display issues.
 
 ## Detailed Commit Information
 
@@ -510,6 +571,7 @@ When searching with regex patterns:
 ## 🛣Roadmap
 
 ### Recently Completed ✅
+- **External editor integration** - Open current file in your preferred editor (vim, VS Code, etc.) at the current line
 - **In-diff search** - Search within diff content with context-aware highlighting
 - **Copy commit hash** - Quick clipboard integration with multiple formats
 - **Detailed commit information** - Comprehensive metadata popups
