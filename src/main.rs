@@ -148,6 +148,14 @@ fn run_ui(terminal: &mut terminal::AppTerminal, app: &mut app::App) -> Result<()
             app.handle_resize(frame.area().width, frame.area().height);
             ui::draw(frame, app);
         })?;
+        // FIX: need help...
+        if app.redraw_tui {
+            terminal.draw(|frame| {
+                // app.handle_resize(frame.area().width, frame.area().height);
+                ui::draw(frame, app);
+            })?;
+            app.redraw_tui = false;
+        }
 
         // Handle events
         if event::poll(Duration::from_millis(100))? {

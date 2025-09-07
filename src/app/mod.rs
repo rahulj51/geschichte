@@ -12,6 +12,7 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use std::{env, process::Command};
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FocusedPanel {
     Commits,
@@ -106,6 +107,9 @@ pub struct App {
 
     // File picker navigation state
     pub came_from_file_picker: bool,
+
+    // TUI state
+    pub redraw_tui: bool,
 }
 
 impl App {
@@ -168,6 +172,7 @@ impl App {
             message_timer: None,
             diff_search_state: None,
             came_from_file_picker: false,
+            redraw_tui: false,
         })
     }
 
@@ -211,6 +216,7 @@ impl App {
             message_timer: None,
             diff_search_state: None,
             came_from_file_picker: false,
+            redraw_tui: false,
         }
     }
 
@@ -958,7 +964,7 @@ impl App {
 
     /// Update the change cache when diff changes
     /// Call this in load_diff_for_selected_commit() and show_diff_range()
-    fn update_change_cache(&mut self) {
+    pub fn update_change_cache(&mut self) {
         let highlighted_diff = crate::diff::HighlightedDiff::new(
             &self.current_diff,
             self.get_file_path().map(|p| p.as_path()),
@@ -1212,33 +1218,17 @@ impl App {
         self.diff_search_state = None;
     }
 
-    pub fn open_editor(&mut self) {
-        use std::os::windows::process::CommandExt;
-        use std::{
-            env,
-            process::{Command, Stdio},
-        };
-        const DETACHED_PROCESS: u32 = 0x00000008;
-        // const DETACHED_PROCESS: u32 = 0x00000016;
+    pub fn open_editor(&mut self) -> Result<()> {
         let current_file = self.get_file_path().expect("a legit path in string.");
         let current_line = self.ui_state.diff_cursor_line;
 
-        {
-            // Get the editor command from the environment or fallback to "hx"
-            let editor = env::var("EDITOR").unwrap_or_else(|_| "hx".to_string());
+        let editor = env::var("EDITOR").unwrap_or_else(|_| "vim".to_string());
 
-            // Launch the editor asynchronously
-            Command::new(editor)
-                .arg(current_file) // pass current file path
-                .arg(format!("+{}", current_line)) // pass +line number)
-                // .stdin(Stdio::null()) // detach stdio
-                // .stdout(Stdio::null())
-                // .stderr(Stdio::null())
-                .creation_flags(DETACHED_PROCESS)
-                .spawn()
-                .expect("Failed to launch editor");
-
-            // Program continues immediately without waiting for the editor to exit
-        }
+        // Launch the editor asynchronously
+        let mut cmd = Command::new(editor);
+        cmd.arg(current_file) // pass current file path
+            .arg(format!("+{}", current_line)); // pass +line number)
+        cmd.status()?;
+        Ok(())
     }
 }

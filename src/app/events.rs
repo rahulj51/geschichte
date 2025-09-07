@@ -194,6 +194,20 @@ impl App {
                         FocusedPanel::Diff => {
                             let layout_mode = self.effective_layout();
                             self.open_editor();
+                            // match self.open_editor() {
+                            //     Ok(()) => {
+                            //         if self.config.editor_open.exit {
+                            //             res = EventHandlingResult::Exit(None);
+                            //         }
+                            //     } // Err(e) => {
+                            //       //     self.app.add_error(AppError {
+                            //       //         name: "Failed to launch editor".to_string(),
+                            //       //         long: e.to_string(),
+                            //       //     });
+                            //       //     error!("Failed to open editor: {e}");
+                            //       // }
+                            // }
+                            self.redraw_tui = true;
                         }
                     }
                 }
