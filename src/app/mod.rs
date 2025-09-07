@@ -1192,22 +1192,22 @@ impl App {
     }
     pub fn open_editor(&mut self) -> Result<()> {
         let current_file = self.get_file_path().expect("a legit path in string.");
-        let current_diff_cursor = &self.ui_state.diff_cursor_line;
+        let current_diff_cursor = self.ui_state.diff_cursor_line;
 
         let highlighted_diff = crate::diff::HighlightedDiff::new(
             &self.current_diff,
             self.get_file_path().map(|p| p.as_path()),
         );
 
-        let diff_detail = highlighted_diff.lines[*current_diff_cursor].clone();
-        let current_line = diff_detail.new_line_num;
+        let diff_detail = highlighted_diff.lines[current_diff_cursor].clone();
+        let current_line = diff_detail.new_line_num.unwrap_or_else(|| 0);
 
         let editor = env::var("EDITOR").unwrap_or_else(|_| "vim".to_string());
 
         // Launch the editor asynchronously
         let mut cmd = Command::new(editor);
         cmd.arg(current_file) // pass current file path
-            .arg(format!("+{}", current_line.unwrap())); // pass +line number)
+            .arg(format!("+{}", current_line)); // pass +line number)
         cmd.status()?;
         Ok(())
     }
