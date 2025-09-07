@@ -398,6 +398,7 @@ mod test {
             message_timer: None,
             diff_search_state: None,
             came_from_file_picker: false,
+            redraw_tui: false,
         };
 
         // Initially, came_from_file_picker should be false
