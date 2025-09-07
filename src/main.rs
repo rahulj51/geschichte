@@ -144,7 +144,7 @@ fn run_ui(terminal: &mut terminal::AppTerminal, app: &mut app::App) -> Result<()
     loop {
         // Draw the UI
         if app.redraw_tui {
-            terminal.clear()?;
+            terminal::force_terminal_reset(terminal)?;
             app.redraw_tui = false;
         }
         terminal.draw(|frame| {
